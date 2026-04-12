@@ -1,6 +1,6 @@
-// motionType/src/core/adjust.ts — framework-agnostic motion-adaptive typography algorithm
+// stabilType/src/core/adjust.ts — framework-agnostic motion-adaptive typography algorithm
 
-import type { MotionTypeOptions } from './types'
+import type { StabilTypeOptions } from './types'
 
 // ─── Saved-state registry ─────────────────────────────────────────────────────
 
@@ -14,13 +14,13 @@ interface SavedState {
 	opacity: string
 	/** Current EMA-smoothed velocity 0–1 */
 	smoothedVelocity: number
-	/** rAF handle for startMotionType loop, if active */
+	/** rAF handle for startStabilType loop, if active */
 	rafId?: number
 }
 
 /**
  * Per-element saved original inline styles and smoothed velocity.
- * The first call to applyMotionType saves the originals; removeMotionType restores them.
+ * The first call to applyStabilType saves the originals; removeStabilType restores them.
  */
 const savedState = new WeakMap<HTMLElement, SavedState>()
 
@@ -79,14 +79,14 @@ export function overrideAxis(baseFVS: string, axis: string, value: number): stri
  * Uses an exponential moving average to smooth the velocity before applying
  * letter-spacing, font-variation-settings (wght + opsz), and opacity.
  *
- * Calling applyMotionType multiple times is idempotent: original styles are
+ * Calling applyStabilType multiple times is idempotent: original styles are
  * saved on the first call and used as the baseline for all subsequent calls.
  *
  * @param el       - Element to adapt
  * @param velocity - Normalised velocity 0–1
- * @param options  - MotionTypeOptions (merged with defaults)
+ * @param options  - StabilTypeOptions (merged with defaults)
  */
-export function applyMotionType(el: HTMLElement, velocity: number, options: MotionTypeOptions = {}): void {
+export function applyStabilType(el: HTMLElement, velocity: number, options: StabilTypeOptions = {}): void {
 	if (typeof window === 'undefined') return
 
 	// Resolve options
@@ -147,43 +147,43 @@ export function applyMotionType(el: HTMLElement, velocity: number, options: Moti
  *
  * @param el          - Element to adapt
  * @param getVelocity - Callback returning current normalised velocity 0–1
- * @param options     - MotionTypeOptions (merged with defaults)
+ * @param options     - StabilTypeOptions (merged with defaults)
  */
-export function startMotionType(
+export function startStabilType(
 	el: HTMLElement,
 	getVelocity: () => number,
-	options: MotionTypeOptions = {},
+	options: StabilTypeOptions = {},
 ): () => void {
 	if (typeof window === 'undefined') return () => undefined
 
 	let rafId: number
 
 	function tick() {
-		applyMotionType(el, getVelocity(), options)
+		applyStabilType(el, getVelocity(), options)
 		rafId = requestAnimationFrame(tick)
 	}
 
 	rafId = requestAnimationFrame(tick)
 
-	// Store rafId so removeMotionType can cancel it
+	// Store rafId so removeStabilType can cancel it
 	if (savedState.has(el)) {
 		savedState.get(el)!.rafId = rafId
 	}
 
 	return () => {
 		cancelAnimationFrame(rafId)
-		removeMotionType(el)
+		removeStabilType(el)
 	}
 }
 
 /**
- * Remove motionType styles and restore the element to its original inline styles.
- * Also cancels any active rAF loop started by startMotionType.
- * No-op if applyMotionType was never called on this element.
+ * Remove stabilType styles and restore the element to its original inline styles.
+ * Also cancels any active rAF loop started by startStabilType.
+ * No-op if applyStabilType was never called on this element.
  *
- * @param el - The element previously adjusted by applyMotionType
+ * @param el - The element previously adjusted by applyStabilType
  */
-export function removeMotionType(el: HTMLElement): void {
+export function removeStabilType(el: HTMLElement): void {
 	const state = savedState.get(el)
 	if (!state) return
 	if (state.rafId !== undefined) {

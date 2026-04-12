@@ -1,7 +1,7 @@
-// motionType/src/__tests__/adjust.test.ts — unit tests for the motionType core algorithm
+// stabilType/src/__tests__/adjust.test.ts — unit tests for the stabilType core algorithm
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { applyMotionType, removeMotionType, lerp, overrideAxis } from '../core/adjust'
+import { applyStabilType, removeStabilType, lerp, overrideAxis } from '../core/adjust'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -53,9 +53,9 @@ describe('overrideAxis', () => {
 	})
 })
 
-// ─── applyMotionType ─────────────────────────────────────────────────────────
+// ─── applyStabilType ─────────────────────────────────────────────────────────
 
-describe('applyMotionType', () => {
+describe('applyStabilType', () => {
 	beforeEach(() => {
 		// Stub getComputedStyle to return empty FVS
 		vi.stubGlobal('getComputedStyle', () => ({
@@ -67,7 +67,7 @@ describe('applyMotionType', () => {
 
 	it('at velocity 0 applies rest values', () => {
 		const el = makeEl()
-		applyMotionType(el, 0, {
+		applyStabilType(el, 0, {
 			trackingRange: [0, 0.06],
 			weightRange: [300, 600],
 			opszRange: [12, 24],
@@ -85,7 +85,7 @@ describe('applyMotionType', () => {
 		const el = makeEl()
 		// Call many times at velocity 1 to let EMA converge
 		for (let i = 0; i < 100; i++) {
-			applyMotionType(el, 1, {
+			applyStabilType(el, 1, {
 				trackingRange: [0, 0.06],
 				weightRange: [300, 600],
 				opszRange: [12, 24],
@@ -104,7 +104,7 @@ describe('applyMotionType', () => {
 
 	it('uses custom axis tags', () => {
 		const el = makeEl()
-		applyMotionType(el, 1, {
+		applyStabilType(el, 1, {
 			weightAxis: 'WGHT',
 			opszAxis: 'OPSZ',
 			smoothing: 0,
@@ -114,9 +114,9 @@ describe('applyMotionType', () => {
 	})
 })
 
-// ─── removeMotionType ────────────────────────────────────────────────────────
+// ─── removeStabilType ────────────────────────────────────────────────────────
 
-describe('removeMotionType', () => {
+describe('removeStabilType', () => {
 	beforeEach(() => {
 		vi.stubGlobal('getComputedStyle', () => ({
 			fontVariationSettings: 'normal',
@@ -131,22 +131,22 @@ describe('removeMotionType', () => {
 		el.style.letterSpacing = '0.02em'
 		el.style.opacity = '0.9'
 
-		applyMotionType(el, 0.5, { smoothing: 0 })
+		applyStabilType(el, 0.5, { smoothing: 0 })
 		// Styles should have been changed
 		expect(el.style.fontVariationSettings).not.toBe('"wght" 350')
 
-		removeMotionType(el)
+		removeStabilType(el)
 		// Styles should be restored
 		expect(el.style.fontVariationSettings).toBe('"wght" 350')
 		expect(el.style.letterSpacing).toBe('0.02em')
 		expect(el.style.opacity).toBe('0.9')
 	})
 
-	it('is a no-op if applyMotionType was never called', () => {
+	it('is a no-op if applyStabilType was never called', () => {
 		const el = makeEl()
 		el.style.opacity = '1'
 		// Should not throw
-		removeMotionType(el)
+		removeStabilType(el)
 		expect(el.style.opacity).toBe('1')
 	})
 })

@@ -1,7 +1,7 @@
-// motionType/src/core/types.ts — options interface for the motionType tool
+// stabilType/src/core/types.ts — options interface for the stabilType tool
 
 /** Options controlling how typography adapts to motion velocity */
-export interface MotionTypeOptions {
+export interface StabilTypeOptions {
 	/** Letter-spacing range in em: [at rest, at max velocity]. Default: [0, 0.06] */
 	trackingRange?: [number, number]
 	/** wght axis range: [at rest, at max velocity]. Default: [300, 600] */

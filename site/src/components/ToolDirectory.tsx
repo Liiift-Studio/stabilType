@@ -12,7 +12,7 @@ const TOOLS = [
 	{ name: "Magnet Type",    url: "https://magnettype.com",    id: "magnetType"    },
 	{ name: "Fit Width",      url: "https://fitwidth.com",      id: "fitWidth"      },
 	{ name: "Opsz Stepper",   url: "https://opszstepper.com",   id: "opszStepper"   },
-	{ name: "Motion Type",    url: "https://motiontype.com",    id: "motionType"    },
+	{ name: "Stabil Type",    url: "https://stabiltype.com",    id: "stabilType"    },
 ]
 
 /** Links to all tools; highlights the current one without a link. */

@@ -1,7 +1,7 @@
-// motionType/src/react/useMotionType.ts — React hook for motionType
+// stabilType/src/react/useStabilType.ts — React hook for stabilType
 import { useEffect, type RefObject } from 'react'
-import { applyMotionType, removeMotionType } from '../core/adjust'
-import type { MotionTypeOptions } from '../core/types'
+import { applyStabilType, removeStabilType } from '../core/adjust'
+import type { StabilTypeOptions } from '../core/types'
 
 /**
  * React hook that applies motion-adaptive typography to a referenced element
@@ -9,18 +9,18 @@ import type { MotionTypeOptions } from '../core/types'
  *
  * @param ref      - Ref to the target HTMLElement
  * @param velocity - Normalised velocity 0–1 (updated on each render)
- * @param options  - MotionTypeOptions
+ * @param options  - StabilTypeOptions
  */
-export function useMotionType(ref: RefObject<HTMLElement | null>, velocity: number, options?: MotionTypeOptions): void {
+export function useStabilType(ref: RefObject<HTMLElement | null>, velocity: number, options?: StabilTypeOptions): void {
 	useEffect(() => {
 		const el = ref.current
 		if (!el) return
-		applyMotionType(el, velocity, options)
+		applyStabilType(el, velocity, options)
 	})
 	useEffect(() => {
 		return () => {
 			const el = ref.current
-			if (el) removeMotionType(el)
+			if (el) removeStabilType(el)
 		}
 	}, [])
 }

@@ -11,7 +11,7 @@ export default function Home() {
 			{/* Hero */}
 			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6">
 				<div className="flex flex-col gap-2">
-					<p className="text-xs uppercase tracking-widest opacity-50">motiontype</p>
+					<p className="text-xs uppercase tracking-widest opacity-50">stabiltype</p>
 					<h1 className="text-4xl lg:text-8xl xl:text-9xl" style={{ fontFamily: "var(--font-merriweather), serif", fontVariationSettings: '"wght" 300', lineHeight: "1.05em" }}>
 						Motion adapts<br />
 						<span style={{ opacity: 0.5, fontStyle: "italic" }}>your type.</span>
@@ -19,13 +19,13 @@ export default function Home() {
 				</div>
 				<div className="flex items-center gap-4">
 					<CopyInstall />
-					<a href="https://github.com/Liiift-Studio/MotionType" className="text-sm opacity-50 hover:opacity-100 transition-opacity">GitHub</a>
+					<a href="https://github.com/Liiift-Studio/StabilType" className="text-sm opacity-50 hover:opacity-100 transition-opacity">GitHub</a>
 				</div>
 				<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-50 tracking-wide">
 					<span>TypeScript</span><span>·</span><span>Zero dependencies</span><span>·</span><span>React + Vanilla JS</span>
 				</div>
 				<p className="text-base opacity-60 leading-relaxed max-w-lg">
-					On smart glasses, head motion creates perceptual blur on anchored text. CSS has no motion context — it can&apos;t adjust tracking or weight in response to velocity. motionType bridges that gap, interpolating letter&#8209;spacing, wght, and opsz in real time as velocity changes.
+					On smart glasses, head motion creates perceptual blur on anchored text. CSS has no motion context — it can&apos;t adjust tracking or weight in response to velocity. stabilType bridges that gap, interpolating letter&#8209;spacing, wght, and opsz in real time as velocity changes.
 				</p>
 			</section>
 
@@ -47,15 +47,15 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Three axes compensate together</p>
-						<p>motionType interpolates three properties simultaneously: letter&#8209;spacing opens up at speed (wider tracking survives blur better), wght increases (heavier strokes remain legible), and opsz grows (optical size optimises letterform detail for the effective size-at-blur).</p>
+						<p>stabilType interpolates three properties simultaneously: letter&#8209;spacing opens up at speed (wider tracking survives blur better), wght increases (heavier strokes remain legible), and opsz grows (optical size optimises letterform detail for the effective size-at-blur).</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">EMA smoothing prevents jitter</p>
-						<p>Raw velocity signals are noisy. motionType applies an exponential moving average before mapping velocity to type properties — so the typography transitions feel deliberate rather than jittery. The smoothing factor is tunable per element.</p>
+						<p>Raw velocity signals are noisy. stabilType applies an exponential moving average before mapping velocity to type properties — so the typography transitions feel deliberate rather than jittery. The smoothing factor is tunable per element.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Runs in a rAF loop or on demand</p>
-						<p><code className="text-xs font-mono">startMotionType</code> wires up a <code className="text-xs font-mono">requestAnimationFrame</code> loop and accepts a <code className="text-xs font-mono">getVelocity</code> callback — connect your platform&apos;s IMU or head&#8209;tracking API directly. <code className="text-xs font-mono">applyMotionType</code> lets you drive it frame&#8209;by&#8209;frame from your own loop.</p>
+						<p><code className="text-xs font-mono">startStabilType</code> wires up a <code className="text-xs font-mono">requestAnimationFrame</code> loop and accepts a <code className="text-xs font-mono">getVelocity</code> callback — connect your platform&apos;s IMU or head&#8209;tracking API directly. <code className="text-xs font-mono">applyStabilType</code> lets you drive it frame&#8209;by&#8209;frame from your own loop.</p>
 					</div>
 				</div>
 			</section>
@@ -69,27 +69,27 @@ export default function Home() {
 				<div className="flex flex-col gap-8 text-sm">
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Drop-in component</p>
-						<CodeBlock code={`import { MotionTypeText } from '@liiift-studio/motiontype'
+						<CodeBlock code={`import { StabilTypeText } from '@liiift-studio/stabiltype'
 
-<MotionTypeText velocity={velocity}>
+<StabilTypeText velocity={velocity}>
   Heading text
-</MotionTypeText>`} />
+</StabilTypeText>`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Hook — attach to any element</p>
-						<CodeBlock code={`import { useMotionType } from '@liiift-studio/motiontype'
+						<CodeBlock code={`import { useStabilType } from '@liiift-studio/stabiltype'
 import { useRef } from 'react'
 
 const ref = useRef(null)
-useMotionType(ref, velocity, { weightRange: [300, 700] })
+useStabilType(ref, velocity, { weightRange: [300, 700] })
 <h1 ref={ref}>Heading text</h1>`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">rAF loop — vanilla JS with IMU callback</p>
-						<CodeBlock code={`import { startMotionType } from '@liiift-studio/motiontype'
+						<CodeBlock code={`import { startStabilType } from '@liiift-studio/stabiltype'
 
 const el = document.querySelector('h1')
-const stop = startMotionType(el, () => imu.velocity, {
+const stop = startStabilType(el, () => imu.velocity, {
   trackingRange: [0, 0.08],
   weightRange: [300, 600],
 })
@@ -109,7 +109,7 @@ stop()`} />
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">smoothing</td><td className="py-2 pr-6">0.15</td><td className="py-2">EMA smoothing factor 0–1. Higher = more smoothing (slower response).</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">weightAxis</td><td className="py-2 pr-6">&apos;wght&apos;</td><td className="py-2">Variable font weight axis tag.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">opszAxis</td><td className="py-2 pr-6">&apos;opsz&apos;</td><td className="py-2">Variable font optical size axis tag.</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">as</td><td className="py-2 pr-6">&apos;p&apos;</td><td className="py-2">HTML element to render. (MotionTypeText only)</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">as</td><td className="py-2 pr-6">&apos;p&apos;</td><td className="py-2">HTML element to render. (StabilTypeText only)</td></tr>
 							</tbody>
 						</table>
 					</div>
@@ -118,11 +118,11 @@ stop()`} />
 
 			{/* Footer */}
 			<footer className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6 pt-8 border-t border-white/10 text-xs">
-				<ToolDirectory current="motionType" />
+				<ToolDirectory current="stabilType" />
 				<hr className="border-white/10" />
 				<div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 opacity-50">
 					<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity">liiift.studio</a>
-					<span className="sm:col-start-4">motionType v{version}</span>
+					<span className="sm:col-start-4">stabilType v{version}</span>
 				</div>
 			</footer>
 

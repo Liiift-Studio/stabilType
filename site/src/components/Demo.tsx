@@ -2,8 +2,8 @@
 
 // Interactive demo: velocity slider or cursor/gyro mode drives motion-adaptive typography
 import { useState, useEffect, useRef } from "react"
-import { MotionTypeText } from "@liiift-studio/motiontype"
-import type { MotionTypeOptions } from "@liiift-studio/motiontype"
+import { StabilTypeText } from "@liiift-studio/stabiltype"
+import type { StabilTypeOptions } from "@liiift-studio/stabiltype"
 
 /** Sample paragraph text about motion and legibility */
 const SAMPLE = "Reading anchored text while moving is a fundamentally different perceptual task than reading static type. Smart glasses surface UI while the wearer walks, turns, and gestures — head velocity matters."
@@ -133,7 +133,7 @@ export default function Demo() {
 	const activeMode = cursorMode || gyroMode
 
 	// Resolve current options for live readout
-	const options: MotionTypeOptions = {
+	const options: StabilTypeOptions = {
 		trackingRange: [0, 0.06],
 		weightRange: [300, 600],
 		opszRange: [12, 24],
@@ -214,7 +214,7 @@ export default function Demo() {
 				className="rounded-lg p-6 flex flex-col gap-4"
 				style={{ background: 'rgba(212,184,240,0.04)', border: '1px solid rgba(212,184,240,0.12)' }}
 			>
-				<MotionTypeText
+				<StabilTypeText
 					velocity={velocity}
 					as="p"
 					{...options}
@@ -226,21 +226,21 @@ export default function Demo() {
 					}}
 				>
 					{SAMPLE}
-				</MotionTypeText>
+				</StabilTypeText>
 			</div>
 
 			{/* Live internals readout */}
 			<LiveReadout velocity={velocity} options={options} />
 
 			<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
-				On smart glasses, head motion creates perceptual blur on anchored text. motionType compensates — wider tracking, heavier weight, and larger optical size as velocity increases.
+				On smart glasses, head motion creates perceptual blur on anchored text. stabilType compensates — wider tracking, heavier weight, and larger optical size as velocity increases.
 			</p>
 		</div>
 	)
 }
 
 /** Always-visible live readout of interpolated values */
-function LiveReadout({ velocity, options }: { velocity: number; options: Required<Pick<MotionTypeOptions, 'trackingRange' | 'weightRange' | 'opszRange'>> }) {
+function LiveReadout({ velocity, options }: { velocity: number; options: Required<Pick<StabilTypeOptions, 'trackingRange' | 'weightRange' | 'opszRange'>> }) {
 	// Mirror the EMA from the core so readout values match what's applied
 	const smoothedRef = useRef(0)
 	const [display, setDisplay] = useState({ tracking: 0, weight: 300, opsz: 12 })

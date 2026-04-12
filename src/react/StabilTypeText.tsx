@@ -1,11 +1,11 @@
-// motionType/src/react/MotionTypeText.tsx — React component wrapper for motionType
+// stabilType/src/react/StabilTypeText.tsx — React component wrapper for stabilType
 "use client"
 import { useRef, type ElementType, type ComponentPropsWithRef } from 'react'
-import { useMotionType } from './useMotionType'
-import type { MotionTypeOptions } from '../core/types'
+import { useStabilType } from './useStabilType'
+import type { StabilTypeOptions } from '../core/types'
 
-/** Props for the MotionTypeText component */
-interface MotionTypeTextProps extends MotionTypeOptions {
+/** Props for the StabilTypeText component */
+interface StabilTypeTextProps extends StabilTypeOptions {
 	/** Normalised velocity 0–1 driving the typographic adaptation */
 	velocity: number
 	/** HTML element to render. Default: 'p' */
@@ -22,8 +22,8 @@ interface MotionTypeTextProps extends MotionTypeOptions {
  * Drop-in React component that adapts its typography in real time
  * based on a normalised velocity prop (0 = at rest, 1 = max velocity).
  */
-export function MotionTypeText({ velocity, as: Tag = 'p', children, style, className, ...options }: MotionTypeTextProps) {
+export function StabilTypeText({ velocity, as: Tag = 'p', children, style, className, ...options }: StabilTypeTextProps) {
 	const ref = useRef<HTMLElement>(null)
-	useMotionType(ref as React.RefObject<HTMLElement | null>, velocity, options)
+	useStabilType(ref as React.RefObject<HTMLElement | null>, velocity, options)
 	return <Tag ref={ref} style={style} className={className}>{children}</Tag>
 }

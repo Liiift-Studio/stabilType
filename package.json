@@ -1,5 +1,5 @@
 {
-	"name": "@liiift-studio/motiontype",
+	"name": "@liiift-studio/stabiltype",
 	"version": "0.0.1",
 	"description": "Motion-adaptive typography — adapts letter-spacing, weight, and optical size in real time based on motion velocity",
 	"type": "module",
@@ -65,13 +65,13 @@
 	],
 	"author": "Quinn Keaveney <quinn@liiift.studio>",
 	"license": "MIT",
-	"homepage": "https://motiontype.com",
+	"homepage": "https://stabiltype.com",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Liiift-Studio/MotionType.git"
+		"url": "https://github.com/Liiift-Studio/StabilType.git"
 	},
 	"bugs": {
-		"url": "https://github.com/Liiift-Studio/MotionType/issues"
+		"url": "https://github.com/Liiift-Studio/StabilType/issues"
 	},
 	"sideEffects": false,
 	"publishConfig": {
