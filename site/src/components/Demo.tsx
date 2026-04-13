@@ -233,7 +233,7 @@ export default function Demo() {
 			<LiveReadout velocity={velocity} options={options} />
 
 			<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
-				On smart glasses, head motion creates perceptual blur on anchored text. stabilType compensates — wider tracking, heavier weight, and larger optical size as velocity increases.
+				On smart glasses, head motion creates perceptual blur on anchored text. stabilType compensates — wider tracking, heavier weight, and larger optical size as velocity increases. The same principle applies to automotive head-up displays — road vibration creates the same perceptual challenge as walking with glasses.
 			</p>
 		</div>
 	)
