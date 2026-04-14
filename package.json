@@ -1,6 +1,6 @@
 {
 	"name": "@liiift-studio/stabiltype",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "Motion-adaptive typography \u2014 adapts letter-spacing, weight, and optical size in real time based on motion velocity",
 	"type": "module",
 	"main": "dist/index.cjs",
