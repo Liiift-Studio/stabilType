@@ -65,7 +65,7 @@
 	],
 	"author": "Quinn Keaveney <quinn@liiift.studio>",
 	"license": "MIT",
-	"homepage": "https://stabiltype.com",
+	"homepage": "https://stabiltype-liiift.vercel.app",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Liiift-Studio/StabilType.git"
