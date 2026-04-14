@@ -240,7 +240,7 @@ export default function Demo() {
 }
 
 /** Always-visible live readout of interpolated values */
-function LiveReadout({ velocity, options }: { velocity: number; options: Required<Pick<StabilTypeOptions, 'trackingRange' | 'weightRange' | 'opszRange'>> }) {
+function LiveReadout({ velocity, options }: { velocity: number; options: StabilTypeOptions }) {
 	// Mirror the EMA from the core so readout values match what's applied
 	const smoothedRef = useRef(0)
 	const [display, setDisplay] = useState({ tracking: 0, weight: 300, opsz: 12 })
@@ -251,10 +251,13 @@ function LiveReadout({ velocity, options }: { velocity: number; options: Require
 		smoothedRef.current = smoothedRef.current * alpha + velocity * (1 - alpha)
 		const t = smoothedRef.current
 		const lerp = (a: number, b: number) => a + (b - a) * t
+		const trackingRange = options.trackingRange ?? [0, 0.06]
+		const weightRange = options.weightRange ?? [300, 600]
+		const opszRange = options.opszRange ?? [12, 24]
 		setDisplay({
-			tracking: lerp(options.trackingRange[0], options.trackingRange[1]),
-			weight: lerp(options.weightRange[0], options.weightRange[1]),
-			opsz: lerp(options.opszRange[0], options.opszRange[1]),
+			tracking: lerp(trackingRange[0], trackingRange[1]),
+			weight: lerp(weightRange[0], weightRange[1]),
+			opsz: lerp(opszRange[0], opszRange[1]),
 		})
 	})
 
