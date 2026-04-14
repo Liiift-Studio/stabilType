@@ -1,4 +1,4 @@
-// stabilType/src/core/adjust.ts — framework-agnostic motion-adaptive typography algorithm
+// stabilType/src/core/adjust.ts — framework-agnostic motion-adaptive typography algorithm (scroll + device motion)
 
 import type { StabilTypeOptions } from './types'
 
@@ -33,6 +33,7 @@ const DEFAULTS = {
 	opszRange: [12, 24] as [number, number],
 	opacityRange: [1, 0.7] as [number, number],
 	smoothing: 0.15,
+	velocityMax: 15,
 	weightAxis: 'wght',
 	opszAxis: 'opsz',
 }
@@ -140,38 +141,92 @@ export function applyStabilType(el: HTMLElement, velocity: number, options: Stab
 }
 
 /**
- * Start a requestAnimationFrame loop that reads velocity from a callback and
- * applies motion-adaptive typography on every frame.
+ * Start motion-adaptive typography on an element.
+ *
+ * Two calling conventions:
+ *
+ * 1. `startStabilType(el, getVelocity, options?)` — external velocity source.
+ *    `getVelocity` is called every animation frame and must return a pre-normalised
+ *    value in [0, 1]. Use this for gyroscope, accelerometer, audio level, etc.
+ *
+ * 2. `startStabilType(el, options?)` — built-in scroll listener.
+ *    Listens to window scroll events, computes px-per-frame velocity, normalises
+ *    by `options.velocityMax` (default 15 px/frame), and applies velocity decay
+ *    when the user stops scrolling. This absorbs the former scrollType API.
  *
  * Returns a cleanup function that cancels the loop and restores original styles.
  *
- * @param el          - Element to adapt
- * @param getVelocity - Callback returning current normalised velocity 0–1
- * @param options     - StabilTypeOptions (merged with defaults)
+ * @param el                   - Element to adapt
+ * @param getVelocityOrOptions - Velocity callback OR options object (selects mode)
+ * @param options              - StabilTypeOptions when using callback mode
  */
+export function startStabilType(el: HTMLElement, options?: StabilTypeOptions): () => void
+export function startStabilType(el: HTMLElement, getVelocity: () => number, options?: StabilTypeOptions): () => void
 export function startStabilType(
 	el: HTMLElement,
-	getVelocity: () => number,
-	options: StabilTypeOptions = {},
+	getVelocityOrOptions?: (() => number) | StabilTypeOptions,
+	options?: StabilTypeOptions,
 ): () => void {
 	if (typeof window === 'undefined') return () => undefined
 
 	let rafId: number
 
-	function tick() {
-		applyStabilType(el, getVelocity(), options)
+	if (typeof getVelocityOrOptions === 'function') {
+		// ── External velocity source (gyroscope, audio, etc.) ──────────────────
+		const getVelocity = getVelocityOrOptions
+		const opts = options ?? {}
+
+		function tick() {
+			applyStabilType(el, getVelocity(), opts)
+			rafId = requestAnimationFrame(tick)
+		}
+
 		rafId = requestAnimationFrame(tick)
+
+		if (savedState.has(el)) savedState.get(el)!.rafId = rafId
+
+		return () => {
+			cancelAnimationFrame(rafId)
+			removeStabilType(el)
+		}
 	}
 
+	// ── Built-in scroll listener (absorbed from scrollType) ────────────────────
+	const opts = getVelocityOrOptions ?? {}
+	const velocityMax = opts.velocityMax ?? DEFAULTS.velocityMax
+
+	let lastScrollY = window.scrollY
+	let lastTime = performance.now()
+	let currentVelocity = 0
+
+	/** Compute px-per-frame velocity from scroll delta and elapsed time */
+	const onScroll = () => {
+		const now = performance.now()
+		const dt = now - lastTime
+		const dy = Math.abs(window.scrollY - lastScrollY)
+		// Normalise to px-per-frame assuming 60fps (16.67ms per frame)
+		currentVelocity = dt > 0 ? (dy / dt) * 16.67 : 0
+		lastScrollY = window.scrollY
+		lastTime = now
+	}
+
+	/** Per-frame tick: normalise velocity, apply, decay */
+	const tick = () => {
+		rafId = requestAnimationFrame(tick)
+		const normalised = Math.min(currentVelocity / velocityMax, 1)
+		applyStabilType(el, normalised, opts)
+		// Decay when not scrolling so typography settles back to rest
+		currentVelocity *= 0.85
+	}
+
+	window.addEventListener('scroll', onScroll, { passive: true })
 	rafId = requestAnimationFrame(tick)
 
-	// Store rafId so removeStabilType can cancel it
-	if (savedState.has(el)) {
-		savedState.get(el)!.rafId = rafId
-	}
+	if (savedState.has(el)) savedState.get(el)!.rafId = rafId
 
 	return () => {
 		cancelAnimationFrame(rafId)
+		window.removeEventListener('scroll', onScroll)
 		removeStabilType(el)
 	}
 }

@@ -16,4 +16,10 @@ export interface StabilTypeOptions {
 	weightAxis?: string
 	/** Variable font optical size axis tag. Default: 'opsz' */
 	opszAxis?: string
+	/**
+	 * Scroll velocity in px/frame that maps to maximum typography adjustment.
+	 * Only used when startStabilType is called without a getVelocity callback
+	 * (i.e. using the built-in scroll listener). Default: 15
+	 */
+	velocityMax?: number
 }
