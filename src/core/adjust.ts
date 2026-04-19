@@ -1,6 +1,11 @@
 // stabilType/src/core/adjust.ts — framework-agnostic motion-adaptive typography algorithm (scroll + device motion)
 
-import type { StabilTypeOptions } from './types'
+import type { StabilTypeOptions, Velocity2D } from './types'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** perspective() value that is effectively flat — used as the at-rest baseline */
+const FLAT_PERSPECTIVE = 5000
 
 // ─── Saved-state registry ─────────────────────────────────────────────────────
 
@@ -12,8 +17,12 @@ interface SavedState {
 	letterSpacing: string
 	/** el.style.opacity at time of first call */
 	opacity: string
-	/** Current EMA-smoothed velocity 0–1 */
-	smoothedVelocity: number
+	/** el.style.transform at time of first call */
+	transform: string
+	/** Current EMA-smoothed vertical velocity, signed –1 to +1 */
+	smoothedVY: number
+	/** Current EMA-smoothed horizontal velocity, signed –1 to +1 */
+	smoothedVX: number
 	/** rAF handle for startStabilType loop, if active */
 	rafId?: number
 }
@@ -36,6 +45,10 @@ const DEFAULTS = {
 	velocityMax: 15,
 	weightAxis: 'wght',
 	opszAxis: 'opsz',
+	perspective: 600,
+	tilt: 3,
+	slntRange: [8, -8] as [number, number],
+	slntAxis: 'slnt',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -74,30 +87,42 @@ export function overrideAxis(baseFVS: string, axis: string, value: number): stri
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Apply motion-adaptive typography to an element given a pre-normalised
- * velocity value (0 = at rest, 1 = maximum velocity).
+ * Apply motion-adaptive typography to an element given a pre-normalised velocity.
  *
- * Uses an exponential moving average to smooth the velocity before applying
- * letter-spacing, font-variation-settings (wght + opsz), and opacity.
+ * Velocity can be:
+ * - A signed scalar –1 to +1 (treated as Y-axis / vertical only)
+ * - A Velocity2D object { x, y } for full 2D directional support
  *
- * Calling applyStabilType multiple times is idempotent: original styles are
- * saved on the first call and used as the baseline for all subsequent calls.
+ * Unsigned effects (wght, opsz, tracking, opacity) respond to combined speed magnitude.
+ * Directional effects (slnt, rotateX, rotateY, perspective) respond to signed components.
  *
  * @param el       - Element to adapt
- * @param velocity - Normalised velocity 0–1
+ * @param velocity - Signed velocity scalar or 2D vector
  * @param options  - StabilTypeOptions (merged with defaults)
  */
-export function applyStabilType(el: HTMLElement, velocity: number, options: StabilTypeOptions = {}): void {
+export function applyStabilType(
+	el: HTMLElement,
+	velocity: number | Velocity2D,
+	options: StabilTypeOptions = {},
+): void {
 	if (typeof window === 'undefined') return
 
+	// Resolve velocity components
+	const vy = typeof velocity === 'object' ? velocity.y : velocity
+	const vx = typeof velocity === 'object' ? velocity.x : 0
+
 	// Resolve options
-	const trackingRange = options.trackingRange ?? DEFAULTS.trackingRange
-	const weightRange   = options.weightRange   ?? DEFAULTS.weightRange
-	const opszRange     = options.opszRange     ?? DEFAULTS.opszRange
-	const opacityRange  = options.opacityRange  ?? DEFAULTS.opacityRange
-	const smoothing     = options.smoothing     ?? DEFAULTS.smoothing
-	const weightAxis    = options.weightAxis    ?? DEFAULTS.weightAxis
-	const opszAxis      = options.opszAxis      ?? DEFAULTS.opszAxis
+	const trackingRange     = options.trackingRange ?? DEFAULTS.trackingRange
+	const weightRange       = options.weightRange   ?? DEFAULTS.weightRange
+	const opszRange         = options.opszRange     ?? DEFAULTS.opszRange
+	const opacityRange      = options.opacityRange  ?? DEFAULTS.opacityRange
+	const smoothing         = options.smoothing     ?? DEFAULTS.smoothing
+	const weightAxis        = options.weightAxis    ?? DEFAULTS.weightAxis
+	const opszAxis          = options.opszAxis      ?? DEFAULTS.opszAxis
+	const perspectiveDepth  = options.perspective   ?? DEFAULTS.perspective
+	const tiltDeg           = options.tilt          ?? DEFAULTS.tilt
+	const slntRange         = options.slntRange     ?? DEFAULTS.slntRange
+	const slntAxis          = options.slntAxis      ?? DEFAULTS.slntAxis
 
 	// Save original inline styles on first call
 	if (!savedState.has(el)) {
@@ -105,39 +130,60 @@ export function applyStabilType(el: HTMLElement, velocity: number, options: Stab
 			fvs: el.style.fontVariationSettings,
 			letterSpacing: el.style.letterSpacing,
 			opacity: el.style.opacity,
-			smoothedVelocity: 0,
+			transform: el.style.transform,
+			smoothedVY: 0,
+			smoothedVX: 0,
 		})
 	}
 
 	const state = savedState.get(el)!
 
-	// Clamp input velocity
-	const clampedVelocity = Math.min(1, Math.max(0, velocity))
+	// Clamp inputs to –1…+1
+	const clampedVY = Math.min(1, Math.max(-1, vy))
+	const clampedVX = Math.min(1, Math.max(-1, vx))
 
-	// Apply EMA smoothing: new = prev * (1 - α) + input * α
-	// Higher smoothing factor → slower response (more smoothing)
+	// EMA smoothing per axis: new = prev * (1 – α) + input * α
 	const alpha = Math.min(1, Math.max(0, 1 - smoothing))
-	state.smoothedVelocity = state.smoothedVelocity * alpha + clampedVelocity * (1 - alpha)
+	state.smoothedVY = state.smoothedVY * alpha + clampedVY * (1 - alpha)
+	state.smoothedVX = state.smoothedVX * alpha + clampedVX * (1 - alpha)
 
-	const t = state.smoothedVelocity
+	const ty = state.smoothedVY  // signed –1…+1, vertical
+	const tx = state.smoothedVX  // signed –1…+1, horizontal
 
-	// Compute interpolated values
-	const tracking = lerp(trackingRange[0], trackingRange[1], t)
-	const weight   = lerp(weightRange[0],   weightRange[1],   t)
-	const opsz     = lerp(opszRange[0],     opszRange[1],     t)
-	const opacity  = lerp(opacityRange[0],  opacityRange[1],  t)
+	// Combined speed magnitude (0–1) for unsigned effects
+	const speed = Math.min(1, Math.sqrt(ty * ty + tx * tx))
 
-	// Read base FVS from computed style (inherits parent axis values)
+	// ── Unsigned effects (speed-based) ─────────────────────────────────────────
+	const tracking = lerp(trackingRange[0], trackingRange[1], speed)
+	const weight   = lerp(weightRange[0],   weightRange[1],   speed)
+	const opsz     = lerp(opszRange[0],     opszRange[1],     speed)
+	const opacity  = lerp(opacityRange[0],  opacityRange[1],  speed)
+
 	const baseFVS = getComputedStyle(el).fontVariationSettings
-
-	// Apply: weight axis, then opsz axis
 	let newFVS = overrideAxis(baseFVS, weightAxis, Math.round(weight))
-	newFVS = overrideAxis(newFVS, opszAxis, Math.round(opsz * 10) / 10)
+	newFVS     = overrideAxis(newFVS,  opszAxis,   Math.round(opsz * 10) / 10)
 
-	// Write all style properties
 	el.style.fontVariationSettings = newFVS
-	el.style.letterSpacing = `${tracking.toFixed(4)}em`
-	el.style.opacity = opacity.toFixed(4)
+	el.style.letterSpacing         = `${tracking.toFixed(4)}em`
+	el.style.opacity               = opacity.toFixed(4)
+
+	// ── Directional effects ─────────────────────────────────────────────────────
+
+	// slnt: driven by vertical scroll only (forward lean on downscroll)
+	// lerp from slntRange[0] (peak up) to slntRange[1] (peak down) via ty
+	const slntValue = lerp(slntRange[0], slntRange[1], (ty + 1) / 2)
+	newFVS = overrideAxis(newFVS, slntAxis, Math.round(slntValue * 10) / 10)
+	el.style.fontVariationSettings = newFVS
+
+	// perspective + rotateX (Y scroll) + rotateY (X scroll)
+	if (perspectiveDepth > 0) {
+		const perspValue = lerp(FLAT_PERSPECTIVE, perspectiveDepth, speed)
+		const rotateX    = ty * -tiltDeg   // downscroll tips top away (negative rotateX)
+		const rotateY    = tx * tiltDeg    // rightscroll tips right away
+		el.style.transform = `perspective(${perspValue.toFixed(0)}px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`
+	} else {
+		el.style.transform = state.transform
+	}
 }
 
 /**
@@ -146,13 +192,13 @@ export function applyStabilType(el: HTMLElement, velocity: number, options: Stab
  * Two calling conventions:
  *
  * 1. `startStabilType(el, getVelocity, options?)` — external velocity source.
- *    `getVelocity` is called every animation frame and must return a pre-normalised
- *    value in [0, 1]. Use this for gyroscope, accelerometer, audio level, etc.
+ *    `getVelocity` returns a scalar or Velocity2D each frame. Use for gyroscope,
+ *    accelerometer, audio level, pointer proximity, etc.
  *
  * 2. `startStabilType(el, options?)` — built-in scroll listener.
- *    Listens to window scroll events, computes px-per-frame velocity, normalises
- *    by `options.velocityMax` (default 15 px/frame), and applies velocity decay
- *    when the user stops scrolling. This absorbs the former scrollType API.
+ *    Tracks both window.scrollX and window.scrollY, computes signed px-per-frame
+ *    velocity on each axis, normalises by `options.velocityMax`, and decays when
+ *    the user stops scrolling.
  *
  * Returns a cleanup function that cancels the loop and restores original styles.
  *
@@ -161,10 +207,14 @@ export function applyStabilType(el: HTMLElement, velocity: number, options: Stab
  * @param options              - StabilTypeOptions when using callback mode
  */
 export function startStabilType(el: HTMLElement, options?: StabilTypeOptions): () => void
-export function startStabilType(el: HTMLElement, getVelocity: () => number, options?: StabilTypeOptions): () => void
 export function startStabilType(
 	el: HTMLElement,
-	getVelocityOrOptions?: (() => number) | StabilTypeOptions,
+	getVelocity: () => number | Velocity2D,
+	options?: StabilTypeOptions,
+): () => void
+export function startStabilType(
+	el: HTMLElement,
+	getVelocityOrOptions?: (() => number | Velocity2D) | StabilTypeOptions,
 	options?: StabilTypeOptions,
 ): () => void {
 	if (typeof window === 'undefined') return () => undefined
@@ -172,7 +222,7 @@ export function startStabilType(
 	let rafId: number
 
 	if (typeof getVelocityOrOptions === 'function') {
-		// ── External velocity source (gyroscope, audio, etc.) ──────────────────
+		// ── External velocity source ───────────────────────────────────────────
 		const getVelocity = getVelocityOrOptions
 		const opts = options ?? {}
 
@@ -182,7 +232,6 @@ export function startStabilType(
 		}
 
 		rafId = requestAnimationFrame(tick)
-
 		if (savedState.has(el)) savedState.get(el)!.rafId = rafId
 
 		return () => {
@@ -191,37 +240,45 @@ export function startStabilType(
 		}
 	}
 
-	// ── Built-in scroll listener (absorbed from scrollType) ────────────────────
+	// ── Built-in scroll listener ───────────────────────────────────────────────
 	const opts = getVelocityOrOptions ?? {}
 	const velocityMax = opts.velocityMax ?? DEFAULTS.velocityMax
 
+	let lastScrollX = window.scrollX
 	let lastScrollY = window.scrollY
-	let lastTime = performance.now()
-	let currentVelocity = 0
+	let lastTime    = performance.now()
+	let currentVX   = 0
+	let currentVY   = 0
 
-	/** Compute px-per-frame velocity from scroll delta and elapsed time */
+	/** Compute signed px-per-frame velocity on both axes from scroll delta */
 	const onScroll = () => {
 		const now = performance.now()
-		const dt = now - lastTime
-		const dy = Math.abs(window.scrollY - lastScrollY)
-		// Normalise to px-per-frame assuming 60fps (16.67ms per frame)
-		currentVelocity = dt > 0 ? (dy / dt) * 16.67 : 0
+		const dt  = now - lastTime
+		if (dt > 0) {
+			const dx = window.scrollX - lastScrollX
+			const dy = window.scrollY - lastScrollY
+			// Normalise to px/frame at 60fps (16.67ms per frame)
+			currentVX = (dx / dt) * 16.67
+			currentVY = (dy / dt) * 16.67
+		}
+		lastScrollX = window.scrollX
 		lastScrollY = window.scrollY
-		lastTime = now
+		lastTime    = now
 	}
 
-	/** Per-frame tick: normalise velocity, apply, decay */
+	/** Per-frame tick: normalise, apply, decay */
 	const tick = () => {
 		rafId = requestAnimationFrame(tick)
-		const normalised = Math.min(currentVelocity / velocityMax, 1)
-		applyStabilType(el, normalised, opts)
-		// Decay when not scrolling so typography settles back to rest
-		currentVelocity *= 0.85
+		const nx = Math.sign(currentVX) * Math.min(Math.abs(currentVX) / velocityMax, 1)
+		const ny = Math.sign(currentVY) * Math.min(Math.abs(currentVY) / velocityMax, 1)
+		applyStabilType(el, { x: nx, y: ny }, opts)
+		// Decay so typography settles back to rest after scrolling stops
+		currentVX *= 0.85
+		currentVY *= 0.85
 	}
 
 	window.addEventListener('scroll', onScroll, { passive: true })
 	rafId = requestAnimationFrame(tick)
-
 	if (savedState.has(el)) savedState.get(el)!.rafId = rafId
 
 	return () => {
@@ -241,11 +298,10 @@ export function startStabilType(
 export function removeStabilType(el: HTMLElement): void {
 	const state = savedState.get(el)
 	if (!state) return
-	if (state.rafId !== undefined) {
-		cancelAnimationFrame(state.rafId)
-	}
+	if (state.rafId !== undefined) cancelAnimationFrame(state.rafId)
 	el.style.fontVariationSettings = state.fvs
-	el.style.letterSpacing = state.letterSpacing
-	el.style.opacity = state.opacity
+	el.style.letterSpacing         = state.letterSpacing
+	el.style.opacity               = state.opacity
+	el.style.transform             = state.transform
 	savedState.delete(el)
 }

@@ -18,8 +18,30 @@ export interface StabilTypeOptions {
 	opszAxis?: string
 	/**
 	 * Scroll velocity in px/frame that maps to maximum typography adjustment.
-	 * Only used when startStabilType is called without a getVelocity callback
-	 * (i.e. using the built-in scroll listener). Default: 15
+	 * Only used when startStabilType is called without a getVelocity callback.
+	 * Default: 15
 	 */
 	velocityMax?: number
+	/**
+	 * CSS perspective depth in px at peak scroll velocity. Controls dolly compression —
+	 * the faster the scroll, the tighter the perspective. Default: 600. Set to 0 to disable.
+	 */
+	perspective?: number
+	/**
+	 * rotateX/rotateY tilt in degrees at peak velocity. Sign follows scroll direction:
+	 * downscroll tips the top away, upscroll tips the bottom away. Default: 3
+	 */
+	tilt?: number
+	/** slnt axis range: [at peak upscroll, at peak downscroll]. Default: [8, -8] */
+	slntRange?: [number, number]
+	/** Variable font slant axis tag. Default: 'slnt' */
+	slntAxis?: string
+}
+
+/** 2D signed velocity vector, each axis –1 (negative direction) to +1 (positive direction) */
+export interface Velocity2D {
+	/** Horizontal: negative = scrolling left, positive = scrolling right */
+	x: number
+	/** Vertical: negative = scrolling up, positive = scrolling down */
+	y: number
 }

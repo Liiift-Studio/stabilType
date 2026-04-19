@@ -2,12 +2,12 @@
 "use client"
 import { useRef, type ElementType, type ComponentPropsWithRef } from 'react'
 import { useStabilType } from './useStabilType'
-import type { StabilTypeOptions } from '../core/types'
+import type { StabilTypeOptions, Velocity2D } from '../core/types'
 
 /** Props for the StabilTypeText component */
 interface StabilTypeTextProps extends StabilTypeOptions {
-	/** Normalised velocity 0–1 driving the typographic adaptation */
-	velocity: number
+	/** Signed scalar –1…+1 or Velocity2D { x, y } driving the typographic adaptation */
+	velocity: number | Velocity2D
 	/** HTML element to render. Default: 'p' */
 	as?: ElementType
 	/** Text content */

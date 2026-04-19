@@ -2,4 +2,4 @@
 export { applyStabilType, startStabilType, removeStabilType, lerp, overrideAxis } from './core/adjust'
 export { useStabilType } from './react/useStabilType'
 export { StabilTypeText } from './react/StabilTypeText'
-export type { StabilTypeOptions } from './core/types'
+export type { StabilTypeOptions, Velocity2D } from './core/types'
