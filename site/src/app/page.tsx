@@ -3,6 +3,8 @@ import CopyInstall from "@/components/CopyInstall"
 import CodeBlock from "@/components/CodeBlock"
 import ToolDirectory from "@/components/ToolDirectory"
 import { version } from "../../../package.json"
+import { version as siteVersion } from "../../package.json"
+import SiteFooter from "../components/SiteFooter"
 
 export default function Home() {
 	return (
@@ -31,8 +33,8 @@ export default function Home() {
 
 			{/* Demo */}
 			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-4">
-				<p className="text-xs uppercase tracking-widest opacity-50">Live demo — drag the slider or use cursor / gyro</p>
-				<div className="rounded-xl -mx-8 px-8 py-8" style={{ background: "rgba(0,0,0,0.25)", overflow: 'hidden' }}>
+				<p className="text-xs uppercase tracking-widest opacity-50">Live demo — scroll this page, or use cursor / gyro</p>
+				<div className="rounded-xl -mx-8 px-8 py-12" style={{ background: "rgba(0,0,0,0.25)" }}>
 					<Demo />
 				</div>
 			</section>
@@ -42,12 +44,12 @@ export default function Home() {
 				<p className="text-xs uppercase tracking-widest opacity-50">How it works</p>
 				<div className="prose-grid grid grid-cols-1 sm:grid-cols-2 gap-12 text-sm leading-relaxed opacity-70">
 					<div className="flex flex-col gap-3">
-						<p className="font-semibold opacity-100 text-base">Motion blurs anchored text</p>
-						<p>When you turn your head wearing smart glasses, world-anchored UI elements appear to smear. The faster the motion, the more the text becomes illegible. CSS has no mechanism to respond to this — there is no velocity context in the rendering pipeline.</p>
+						<p className="font-semibold opacity-100 text-base">Velocity in two dimensions</p>
+						<p>stabilType tracks both vertical and horizontal scroll velocity, each as a signed value — downscroll and rightscroll are positive; upscroll and leftscroll are negative. The combined magnitude drives font adaptation. The sign drives direction-specific tilt and lean.</p>
 					</div>
 					<div className="flex flex-col gap-3">
-						<p className="font-semibold opacity-100 text-base">Three axes compensate together</p>
-						<p>stabilType interpolates three properties simultaneously: letter&#8209;spacing opens up at speed (wider tracking survives blur better), wght increases (heavier strokes remain legible), and opsz grows (optical size optimises letterform detail for the effective size-at-blur).</p>
+						<p className="font-semibold opacity-100 text-base">Perspective compression + directional tilt</p>
+						<p>As speed increases, a CSS <code className="text-xs font-mono">perspective()</code> function tightens — the text plane compresses toward the viewer, like a dolly zoom. Simultaneously, <code className="text-xs font-mono">rotateX</code> and <code className="text-xs font-mono">rotateY</code> tilt the element in the direction of travel. Both effects decay the moment scrolling stops.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">EMA smoothing prevents jitter</p>
@@ -89,13 +91,19 @@ useStabilType(ref, velocity, { weightRange: [300, 700] })
 						<CodeBlock code={`import { startStabilType } from '@liiift-studio/stabiltype'
 
 const el = document.querySelector('h1')
-const stop = startStabilType(el, () => imu.velocity, {
+
+// Built-in scroll listener — tracks both X and Y axes automatically
+const stop = startStabilType(el, {
   trackingRange: [0, 0.08],
   weightRange: [300, 600],
+  perspective: 600,
+  tilt: 4,
 })
 
-// Later — cancel loop and restore styles
-stop()`} />
+// External 2D velocity source — e.g. IMU or pointer
+const stop = startStabilType(el, () => ({ x: imu.vx, y: imu.vy }), options)
+
+stop() // cancel loop and restore styles`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Options</p>
@@ -109,6 +117,9 @@ stop()`} />
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">smoothing</td><td className="py-2 pr-6">0.15</td><td className="py-2">EMA smoothing factor 0–1. Higher = more smoothing (slower response).</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">weightAxis</td><td className="py-2 pr-6">&apos;wght&apos;</td><td className="py-2">Variable font weight axis tag.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">opszAxis</td><td className="py-2 pr-6">&apos;opsz&apos;</td><td className="py-2">Variable font optical size axis tag.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">perspective</td><td className="py-2 pr-6">600</td><td className="py-2">CSS perspective depth in px at peak velocity. Tighter = more dramatic compression. 0 to disable.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">tilt</td><td className="py-2 pr-6">3</td><td className="py-2">rotateX/rotateY in degrees at peak velocity. Sign follows scroll direction.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">slntRange</td><td className="py-2 pr-6">[8, -8]</td><td className="py-2">slnt axis range: [at peak upscroll, at peak downscroll]. No-op on fonts without a slnt axis.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">as</td><td className="py-2 pr-6">&apos;p&apos;</td><td className="py-2">HTML element to render. (StabilTypeText only)</td></tr>
 							</tbody>
 						</table>
@@ -116,15 +127,7 @@ stop()`} />
 				</div>
 			</section>
 
-			{/* Footer */}
-			<footer className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6 pt-8 border-t border-white/10 text-xs">
-				<ToolDirectory current="stabilType" />
-				<hr className="border-white/10" />
-				<div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 opacity-50">
-					<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity">liiift.studio</a>
-					<span className="sm:col-start-4">stabilType v{version}</span>
-				</div>
-			</footer>
+			<SiteFooter current="stabilType" npmVersion={version} siteVersion={siteVersion} />
 
 		</main>
 	)

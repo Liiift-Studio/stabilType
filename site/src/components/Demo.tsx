@@ -1,14 +1,26 @@
 "use client"
 
-// Interactive demo: velocity slider or cursor/gyro mode drives motion-adaptive typography
+// Demo: scroll velocity (both axes) drives perspective compression, directional tilt, and font adaptation
 import { useState, useEffect, useRef } from "react"
-import { StabilTypeText } from "@liiift-studio/stabiltype"
-import type { StabilTypeOptions } from "@liiift-studio/stabiltype"
+import { startStabilType } from "@liiift-studio/stabiltype"
+import type { StabilTypeOptions, Velocity2D } from "@liiift-studio/stabiltype"
 
-/** Sample paragraph text about motion and legibility */
-const SAMPLE = "Reading anchored text while moving is a fundamentally different perceptual task than reading static type. Smart glasses surface UI while the wearer walks, turns, and gestures — head velocity matters."
+const PARA_1 = "Typography has always assumed a fixed observer. The reader is still, the page is still, and every spacing decision optimises for that arrangement. But text increasingly appears in motion — on phones jostled by footsteps, on smart glasses updating while the wearer turns, on dashboards alive with road vibration."
 
-/** Cursor icon SVG */
+const PARA_2 = "stabilType acknowledges the moving reader. Scroll this page to feel the perspective compress and the text plane tilt in the direction of travel. Move diagonally and both axes respond simultaneously. Everything decays the moment motion stops — a fleeting impression of the force applied, then stillness."
+
+const OPTIONS: StabilTypeOptions = {
+	trackingRange: [0, 0.07],
+	weightRange: [300, 650],
+	opszRange: [12, 24],
+	opacityRange: [1, 1],
+	perspective: 550,
+	tilt: 5,
+	slntRange: [6, -6],
+	smoothing: 0.12,
+	velocityMax: 18,
+}
+
 function CursorIcon() {
 	return (
 		<svg width="11" height="14" viewBox="0 0 11 14" fill="currentColor" aria-hidden>
@@ -17,114 +29,101 @@ function CursorIcon() {
 	)
 }
 
-/** Gyroscope icon SVG */
 function GyroIcon() {
 	return (
 		<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden>
 			<circle cx="7" cy="7" r="5.5" />
 			<circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
-			<path d="M7 1.5 A5.5 5.5 0 0 1 12.5 7" strokeWidth="1.4" />
+			<path d="M7 1.5 A5.5 5.5 0 0 1 12.5 7" />
 			<path d="M11.5 5.5 L12.5 7 L13.8 6" strokeWidth="1.2" />
 		</svg>
 	)
 }
 
-/** Clamp a number to [min, max] */
-function clamp(v: number, min: number, max: number): number {
-	return Math.min(max, Math.max(min, v))
-}
-
-/** Interactive demo with velocity slider, cursor mode, and gyro mode */
 export default function Demo() {
-	const [velocity, setVelocity] = useState(0)
+	const cardRef = useRef<HTMLDivElement>(null)
+	const externalVRef = useRef<Velocity2D>({ x: 0, y: 0 })
 
-	// Interaction modes — mutually exclusive
 	const [cursorMode, setCursorMode] = useState(false)
 	const [gyroMode, setGyroMode] = useState(false)
-
-	// Accelerometer magnitude for gyro mode — stored in a ref to avoid stale closure issues
-	const accelRef = useRef(0)
-
-	// Detected capabilities — resolved client-side after mount
 	const [showCursor, setShowCursor] = useState(false)
 	const [showGyro, setShowGyro] = useState(false)
 
-	// Ref to the demo wrapper for bounding box
-	const demoRef = useRef<HTMLDivElement>(null)
-
 	useEffect(() => {
-		const isHover = window.matchMedia('(hover: hover)').matches
-		const isTouch = window.matchMedia('(hover: none)').matches
-		setShowCursor(isHover)
-		setShowGyro(isTouch && 'DeviceMotionEvent' in window)
+		setShowCursor(window.matchMedia('(hover: hover)').matches)
+		setShowGyro(window.matchMedia('(hover: none)').matches && 'DeviceMotionEvent' in window)
 	}, [])
 
-	// Cursor mode — mouse Y position drives velocity (top = 1, bottom = 0). Esc to exit.
+	// Wire startStabilType — swap between built-in scroll and external source on mode change
+	useEffect(() => {
+		const el = cardRef.current
+		if (!el) return
+		if (cursorMode || gyroMode) {
+			return startStabilType(el, () => externalVRef.current, OPTIONS)
+		}
+		return startStabilType(el, OPTIONS)
+	}, [cursorMode, gyroMode])
+
+	// Cursor mode: viewport-relative signed 2D position
 	useEffect(() => {
 		if (!cursorMode) return
-		const handleMove = (e: MouseEvent) => {
-			// Invert Y: top of viewport = max velocity
-			setVelocity(clamp(1 - e.clientY / window.innerHeight, 0, 1))
+		const onMove = (e: MouseEvent) => {
+			externalVRef.current = {
+				x: (e.clientX / window.innerWidth - 0.5) * 2,
+				y: (e.clientY / window.innerHeight - 0.5) * 2,
+			}
 		}
-		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setCursorMode(false)
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				setCursorMode(false)
+				externalVRef.current = { x: 0, y: 0 }
+			}
 		}
-		window.addEventListener('mousemove', handleMove)
-		window.addEventListener('keydown', handleKey)
+		window.addEventListener('mousemove', onMove)
+		window.addEventListener('keydown', onKey)
 		return () => {
-			window.removeEventListener('mousemove', handleMove)
-			window.removeEventListener('keydown', handleKey)
+			window.removeEventListener('mousemove', onMove)
+			window.removeEventListener('keydown', onKey)
+			externalVRef.current = { x: 0, y: 0 }
 		}
 	}, [cursorMode])
 
-	// Gyro mode — DeviceMotionEvent acceleration magnitude → velocity.
-	// Uses rAF throttle to avoid flooding React with state updates.
+	// Gyro mode: device acceleration → signed 2D velocity
 	useEffect(() => {
 		if (!gyroMode) return
 		let rafId: number | null = null
-
-		const handleMotion = (e: DeviceMotionEvent) => {
+		const onMotion = (e: DeviceMotionEvent) => {
 			const acc = e.acceleration
 			if (!acc) return
-			const mag = Math.sqrt(
-				(acc.x ?? 0) ** 2 +
-				(acc.y ?? 0) ** 2 +
-				(acc.z ?? 0) ** 2
-			)
-			accelRef.current = clamp(mag / 20, 0, 1)
+			externalVRef.current = {
+				x: Math.max(-1, Math.min(1, (acc.x ?? 0) / 10)),
+				y: Math.max(-1, Math.min(1, (acc.y ?? 0) / 10)),
+			}
 			if (rafId !== null) return
-			rafId = requestAnimationFrame(() => {
-				rafId = null
-				setVelocity(accelRef.current)
-			})
+			rafId = requestAnimationFrame(() => { rafId = null })
 		}
-
-		window.addEventListener('devicemotion', handleMotion)
+		window.addEventListener('devicemotion', onMotion)
 		return () => {
-			window.removeEventListener('devicemotion', handleMotion)
+			window.removeEventListener('devicemotion', onMotion)
+			externalVRef.current = { x: 0, y: 0 }
 			if (rafId !== null) cancelAnimationFrame(rafId)
 		}
 	}, [gyroMode])
 
-	// Toggle cursor mode
 	const toggleCursor = () => {
 		setGyroMode(false)
 		setCursorMode(v => !v)
 	}
 
-	// Toggle gyro mode — requests iOS permission if needed
 	const toggleGyro = async () => {
-		if (gyroMode) {
-			setGyroMode(false)
-			return
-		}
+		if (gyroMode) { setGyroMode(false); return }
 		setCursorMode(false)
 		const DME = DeviceMotionEvent as typeof DeviceMotionEvent & {
 			requestPermission?: () => Promise<PermissionState>
 		}
 		if (typeof DME.requestPermission === 'function') {
-			const permission = await DME.requestPermission()
-			if (permission === 'granted') setGyroMode(true)
+			const perm = await DME.requestPermission()
+			if (perm === 'granted') setGyroMode(true)
 		} else {
 			setGyroMode(true)
 		}
@@ -132,47 +131,24 @@ export default function Demo() {
 
 	const activeMode = cursorMode || gyroMode
 
-	// Resolve current options for live readout
-	const options: StabilTypeOptions = {
-		trackingRange: [0, 0.06],
-		weightRange: [300, 600],
-		opszRange: [12, 24],
-		opacityRange: [1, 0.7],
-		smoothing: 0.15,
-	}
-
 	return (
-		<div ref={demoRef} className="w-full flex flex-col gap-8">
+		<div className="w-full flex flex-col gap-8">
 
 			{/* Controls */}
-			<div className="flex flex-wrap items-center gap-6">
-				{/* Velocity slider — hidden in active cursor/gyro mode */}
-				{!activeMode && (
-					<div className="flex flex-col gap-1 min-w-48 flex-1">
-						<div className="flex justify-between text-xs uppercase tracking-widest opacity-50">
-							<span>Velocity</span>
-							<span className="tabular-nums">{velocity.toFixed(2)}</span>
-						</div>
-						<input
-							type="range"
-							min={0}
-							max={1}
-							step={0.01}
-							value={velocity}
-							aria-label="Velocity (0 = at rest, 1 = maximum)"
-							onChange={e => setVelocity(Number(e.target.value))}
-							onTouchStart={e => e.stopPropagation()}
-							style={{ touchAction: 'none' }}
-						/>
-					</div>
-				)}
+			<div className="flex flex-wrap items-center justify-between gap-4">
+				<p className="text-xs opacity-40 italic flex-1">
+					{cursorMode
+						? 'Move cursor across the screen — center is neutral, corners are max. Press Esc to exit.'
+						: gyroMode
+							? 'Move your device to drive the effect.'
+							: '↕↔ Scroll this page to feel the effect'}
+				</p>
 
-				{/* Cursor / gyro mode toggles */}
-				<div className="flex flex-wrap items-center gap-3">
+				<div className="flex items-center gap-3">
 					{showCursor && (
 						<button
 							onClick={toggleCursor}
-							title="Move cursor up/down to control velocity"
+							title="Cursor position drives velocity in 2D"
 							className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
 							style={{
 								borderColor: 'currentColor',
@@ -199,73 +175,122 @@ export default function Demo() {
 							<span>{gyroMode ? 'Motion active' : 'Gyro'}</span>
 						</button>
 					)}
-					{activeMode && (
-						<p className="text-xs opacity-50 italic">
-							{cursorMode
-								? 'Move cursor up for max velocity, down for rest. Press Esc to exit.'
-								: 'Move your device to drive velocity.'}
-						</p>
-					)}
 				</div>
 			</div>
 
-			{/* Demo text */}
+			{/* Text card — stabilType applied to this element; whole card tilts */}
 			<div
-				className="rounded-lg p-6 flex flex-col gap-4"
-				style={{ background: 'rgba(212,184,240,0.04)', border: '1px solid rgba(212,184,240,0.12)' }}
+				ref={cardRef}
+				className="rounded-lg p-6 flex flex-col gap-5"
+				style={{
+					background: 'rgba(212,184,240,0.04)',
+					border: '1px solid rgba(212,184,240,0.12)',
+					transformOrigin: 'center center',
+					willChange: 'transform',
+				}}
 			>
-				<StabilTypeText
-					velocity={velocity}
-					as="p"
-					{...options}
-					style={{
-						fontFamily: 'var(--font-merriweather), serif',
-						fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
-						lineHeight: 1.7,
-						margin: 0,
-					}}
-				>
-					{SAMPLE}
-				</StabilTypeText>
+				<p style={{
+					fontFamily: 'var(--font-merriweather), serif',
+					fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
+					lineHeight: 1.7,
+					margin: 0,
+				}}>
+					{PARA_1}
+				</p>
+				<p style={{
+					fontFamily: 'var(--font-merriweather), serif',
+					fontSize: 'clamp(1rem, 2.5vw, 1.35rem)',
+					lineHeight: 1.7,
+					margin: 0,
+					opacity: 0.65,
+				}}>
+					{PARA_2}
+				</p>
 			</div>
 
-			{/* Live internals readout */}
-			<LiveReadout velocity={velocity} options={options} />
-
-			<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
-				On smart glasses, head motion creates perceptual blur on anchored text. stabilType compensates — wider tracking, heavier weight, and larger optical size as velocity increases. The same principle applies to automotive head-up displays — road vibration creates the same perceptual challenge as walking with glasses.
-			</p>
+			{/* Live readout */}
+			<LiveReadout cardRef={cardRef} activeMode={activeMode} />
 		</div>
 	)
 }
 
-/** Always-visible live readout of interpolated values */
-function LiveReadout({ velocity, options }: { velocity: number; options: StabilTypeOptions }) {
-	// Mirror the EMA from the core so readout values match what's applied
-	const smoothedRef = useRef(0)
-	const [display, setDisplay] = useState({ tracking: 0, weight: 300, opsz: 12 })
-
-	useEffect(() => {
-		const smoothing = 0.15
-		const alpha = 1 - smoothing
-		smoothedRef.current = smoothedRef.current * alpha + velocity * (1 - alpha)
-		const t = smoothedRef.current
-		const lerp = (a: number, b: number) => a + (b - a) * t
-		const trackingRange = options.trackingRange ?? [0, 0.06]
-		const weightRange = options.weightRange ?? [300, 600]
-		const opszRange = options.opszRange ?? [12, 24]
-		setDisplay({
-			tracking: lerp(trackingRange[0], trackingRange[1]),
-			weight: lerp(weightRange[0], weightRange[1]),
-			opsz: lerp(opszRange[0], opszRange[1]),
-		})
+/** Polls el.style directly each frame — always matches what's applied */
+function LiveReadout({
+	cardRef,
+	activeMode,
+}: {
+	cardRef: React.RefObject<HTMLDivElement | null>
+	activeMode: boolean
+}) {
+	const [vals, setVals] = useState({
+		perspective: 5000,
+		rotateX: 0,
+		rotateY: 0,
+		wght: 300,
+		tracking: 0,
 	})
 
+	useEffect(() => {
+		let rafId: number
+		const tick = () => {
+			rafId = requestAnimationFrame(tick)
+			const el = cardRef.current
+			if (!el) return
+			const transform = el.style.transform ?? ''
+			const fvs = el.style.fontVariationSettings ?? ''
+			const ls = el.style.letterSpacing ?? ''
+			setVals({
+				perspective: parseInt(transform.match(/perspective\((\d+)px\)/)?.[1] ?? '5000'),
+				rotateX:     parseFloat(transform.match(/rotateX\(([-.0-9]+)deg\)/)?.[1] ?? '0'),
+				rotateY:     parseFloat(transform.match(/rotateY\(([-.0-9]+)deg\)/)?.[1] ?? '0'),
+				wght:        parseFloat(fvs.match(/"wght"\s+([\d.]+)/)?.[1] ?? '300'),
+				tracking:    parseFloat(ls.match(/([-.0-9]+)em/)?.[1] ?? '0'),
+			})
+		}
+		rafId = requestAnimationFrame(tick)
+		return () => cancelAnimationFrame(rafId)
+	}, [cardRef])
+
+	// Normalise tilt to –1…+1 for the indicator dot
+	const TILT_MAX = OPTIONS.tilt ?? 5
+	const dotX = Math.max(-1, Math.min(1, vals.rotateY / TILT_MAX))
+	const dotY = Math.max(-1, Math.min(1, -vals.rotateX / TILT_MAX))
+
 	return (
-		<div className="flex flex-wrap gap-6 text-xs opacity-50 font-mono tabular-nums">
-			<span>tracking: {display.tracking.toFixed(4)}em</span>
-			<span>wght: {display.weight.toFixed(1)}</span>
-			<span>opsz: {display.opsz.toFixed(1)}</span>
+		<div className="flex items-center gap-6">
+			{/* Direction indicator */}
+			<div
+				title="Current tilt direction"
+				style={{
+					width: 40,
+					height: 40,
+					borderRadius: '50%',
+					border: '1px solid rgba(255,255,255,0.15)',
+					position: 'relative',
+					flexShrink: 0,
+				}}
+			>
+				<div style={{
+					width: 6,
+					height: 6,
+					borderRadius: '50%',
+					background: 'rgba(212,184,240,0.8)',
+					position: 'absolute',
+					top: '50%',
+					left: '50%',
+					transform: `translate(calc(-50% + ${dotX * 13}px), calc(-50% + ${dotY * 13}px))`,
+					transition: 'transform 40ms linear',
+				}} />
+			</div>
+
+			{/* Numeric values */}
+			<div className="flex flex-wrap gap-x-6 gap-y-1 text-xs opacity-50 font-mono tabular-nums">
+				<span>perspective: {vals.perspective}px</span>
+				<span>rotateX: {vals.rotateX.toFixed(1)}°</span>
+				<span>rotateY: {vals.rotateY.toFixed(1)}°</span>
+				<span>wght: {vals.wght.toFixed(0)}</span>
+				<span>tracking: {vals.tracking.toFixed(4)}em</span>
+			</div>
 		</div>
 	)
 }
