@@ -47,10 +47,16 @@
 	},
 	"keywords": [
 		"typography",
+		"web-typography",
+		"frontend",
+		"liiift-studio",
 		"variable-font",
 		"font-variation-settings",
 		"motion",
 		"velocity",
+		"scroll-velocity",
+		"device-motion",
+		"gyroscope",
 		"wght",
 		"opsz",
 		"letter-spacing",
@@ -65,7 +71,7 @@
 	],
 	"author": "Quinn Keaveney <quinn@liiift.studio>",
 	"license": "MIT",
-	"homepage": "https://stabiltype-liiift.vercel.app",
+	"homepage": "https://stabiltype.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Liiift-Studio/StabilType.git"

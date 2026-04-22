@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "stabilType — Motion-adaptive typography for smart glasses",
 		description: "Adapts letter-spacing, weight, and optical size in real time based on motion velocity. A precision typesetting tool for smart glasses and AR displays.",
-		url: "https://stabiltype-liiift.vercel.app",
+		url: "https://stabiltype.com",
 		siteName: "stabilType",
 		type: "website",
 	},
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 		title: "stabilType — Motion-adaptive typography for smart glasses",
 		description: "Adapts letter-spacing, weight, and optical size in real time based on motion velocity.",
 	},
-	metadataBase: new URL("https://stabiltype-liiift.vercel.app"),
+	metadataBase: new URL("https://stabiltype.com"),
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
