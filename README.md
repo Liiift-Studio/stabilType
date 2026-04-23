@@ -44,19 +44,21 @@ import { StabilTypeText } from '@liiift-studio/stabiltype'
 `useStabilType` takes a ref, a velocity value, and options. It applies the typography directly to the element on every render where velocity changes.
 
 ```tsx
+"use client"
 import { useStabilType } from '@liiift-studio/stabiltype'
 import { useRef } from 'react'
 
-const ref = useRef<HTMLElement>(null)
+export default function Demo() {
+  const ref = useRef<HTMLParagraphElement>(null)
 
-// velocity is a number –1…+1, or a Velocity2D { x, y } for 2D motion
-useStabilType(ref, velocity, {
-  weightRange: [300, 700],
-  smoothing: 0.2,
-})
+  // velocity is a number –1…+1, or a Velocity2D { x, y } for 2D motion
+  useStabilType(ref, velocity, {
+    weightRange: [300, 700],
+    smoothing: 0.2,
+  })
 
-return <p ref={ref}>Typography in motion</p>
-```
+  return <p ref={ref}>Typography in motion</p>
+}
 
 ### Vanilla JS
 
@@ -75,6 +77,25 @@ const stop = startStabilType(el, {
 // Later — stop the loop and restore original styles:
 stop()
 removeStabilType(el)
+```
+
+To drive from an external velocity source (device motion, pointer tracking, a physics engine), pass a velocity callback. `startStabilType` calls it every animation frame:
+
+```ts
+import { startStabilType } from '@liiift-studio/stabiltype'
+
+const el = document.querySelector('p')
+
+// devicemotion example — y acceleration mapped to –1…+1
+let currentVelocity = 0
+window.addEventListener('devicemotion', (e) => {
+  currentVelocity = Math.max(-1, Math.min(1, (e.acceleration?.y ?? 0) / 9.8))
+})
+
+const stop = startStabilType(el, () => currentVelocity, {
+  weightRange: [300, 700],
+  tilt: 5,
+})
 ```
 
 For manual control — drive velocity yourself from any source:
