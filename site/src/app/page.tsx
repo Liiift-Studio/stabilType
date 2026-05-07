@@ -27,7 +27,7 @@ export default function Home() {
 					<span>TypeScript</span><span>·</span><span>Zero dependencies</span><span>·</span><span>React + Vanilla JS</span>
 				</div>
 				<p className="text-base opacity-60 leading-relaxed max-w-lg">
-					On smart glasses, head motion creates perceptual blur on anchored text. CSS has no motion context — it can&apos;t adjust tracking or weight in response to velocity. stabilType bridges that gap, interpolating letter&#8209;spacing, wght, and opsz in real time as velocity changes.
+					On smart glasses, head motion creates perceptual blur on anchored text. CSS has no motion context — it can&rsquo;t adjust tracking or weight in response to velocity. stabilType bridges that gap, interpolating letter&#8209;spacing, wght, and opsz in real time as velocity changes.
 				</p>
 			</section>
 
@@ -57,7 +57,7 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Runs in a rAF loop or on demand</p>
-						<p><code className="text-xs font-mono">startStabilType</code> wires up a <code className="text-xs font-mono">requestAnimationFrame</code> loop and accepts a <code className="text-xs font-mono">getVelocity</code> callback — connect your platform&apos;s IMU or head&#8209;tracking API directly. <code className="text-xs font-mono">applyStabilType</code> lets you drive it frame&#8209;by&#8209;frame from your own loop.</p>
+						<p><code className="text-xs font-mono">startStabilType</code> wires up a <code className="text-xs font-mono">requestAnimationFrame</code> loop and accepts a <code className="text-xs font-mono">getVelocity</code> callback — connect your platform&rsquo;s IMU or head&#8209;tracking API directly. <code className="text-xs font-mono">applyStabilType</code> lets you drive it frame&#8209;by&#8209;frame from your own loop.</p>
 					</div>
 				</div>
 			</section>
