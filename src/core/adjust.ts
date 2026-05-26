@@ -250,6 +250,9 @@ export function startStabilType(
 	let currentVX   = 0
 	let currentVY   = 0
 
+	/** Velocity magnitude below which the rAF loop sleeps until next scroll event */
+	const SLEEP_THRESHOLD = 0.002
+
 	/** Compute signed px-per-frame velocity on both axes from scroll delta */
 	const onScroll = () => {
 		const now = performance.now()
@@ -264,17 +267,32 @@ export function startStabilType(
 		lastScrollX = window.scrollX
 		lastScrollY = window.scrollY
 		lastTime    = now
+		// Wake the rAF loop if it went to sleep while velocity was negligible
+		if (!rafId) {
+			rafId = requestAnimationFrame(tick)
+			if (savedState.has(el)) savedState.get(el)!.rafId = rafId
+		}
 	}
 
-	/** Per-frame tick: normalise, apply, decay */
+	/** Per-frame tick: normalise, apply, decay — sleeps when velocity is negligible */
 	const tick = () => {
-		rafId = requestAnimationFrame(tick)
 		const nx = Math.sign(currentVX) * Math.min(Math.abs(currentVX) / velocityMax, 1)
 		const ny = Math.sign(currentVY) * Math.min(Math.abs(currentVY) / velocityMax, 1)
+
+		if (Math.abs(nx) < SLEEP_THRESHOLD && Math.abs(ny) < SLEEP_THRESHOLD) {
+			// Snap to rest, then let the loop sleep until the next scroll event
+			applyStabilType(el, { x: 0, y: 0 }, opts)
+			currentVX = 0
+			currentVY = 0
+			rafId = 0
+			return
+		}
+
 		applyStabilType(el, { x: nx, y: ny }, opts)
 		// Decay so typography settles back to rest after scrolling stops
 		currentVX *= 0.85
 		currentVY *= 0.85
+		rafId = requestAnimationFrame(tick)
 	}
 
 	window.addEventListener('scroll', onScroll, { passive: true })
