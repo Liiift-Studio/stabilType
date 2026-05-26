@@ -25,6 +25,8 @@ interface SavedState {
 	smoothedVX: number
 	/** rAF handle for startStabilType loop, if active */
 	rafId?: number
+	/** Computed font-variation-settings snapshot taken on first activation */
+	baseFVS: string
 }
 
 /**
@@ -133,6 +135,9 @@ export function applyStabilType(
 			transform: el.style.transform,
 			smoothedVY: 0,
 			smoothedVX: 0,
+			// Snapshot the cascade FVS once so we don't call getComputedStyle every frame.
+			// liveBaseFVS: true opts back in to the per-call read.
+			baseFVS: getComputedStyle(el).fontVariationSettings,
 		})
 	}
 
@@ -159,7 +164,9 @@ export function applyStabilType(
 	const opsz     = lerp(opszRange[0],     opszRange[1],     speed)
 	const opacity  = lerp(opacityRange[0],  opacityRange[1],  speed)
 
-	const baseFVS = getComputedStyle(el).fontVariationSettings
+	const baseFVS = (options.liveBaseFVS ?? false)
+		? getComputedStyle(el).fontVariationSettings
+		: state.baseFVS
 	let newFVS = overrideAxis(baseFVS, weightAxis, Math.round(weight))
 	newFVS     = overrideAxis(newFVS,  opszAxis,   Math.round(opsz * 10) / 10)
 

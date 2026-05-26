@@ -36,6 +36,14 @@ export interface StabilTypeOptions {
 	slntRange?: [number, number]
 	/** Variable font slant axis tag. Default: 'slnt' */
 	slntAxis?: string
+	/**
+	 * When true, reads font-variation-settings from the computed cascade on every call
+	 * instead of using the snapshot taken on first activation. Set this only when
+	 * external CSS dynamically changes font-variation-settings on the element after
+	 * stabilType has started. Adds a getComputedStyle() call per frame.
+	 * Default: false
+	 */
+	liveBaseFVS?: boolean
 }
 
 /** 2D signed velocity vector, each axis –1 (negative direction) to +1 (positive direction) */
