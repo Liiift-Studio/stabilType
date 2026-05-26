@@ -12,11 +12,17 @@ import type { StabilTypeOptions, Velocity2D } from '../core/types'
  * @param options  - StabilTypeOptions
  */
 export function useStabilType(ref: RefObject<HTMLElement | null>, velocity: number | Velocity2D, options?: StabilTypeOptions): void {
+	// Serialise velocity so the effect only re-runs when the value actually changes
+	const vx = typeof velocity === 'object' ? velocity.x : 0
+	const vy = typeof velocity === 'object' ? velocity.y : velocity
+
 	useEffect(() => {
 		const el = ref.current
 		if (!el) return
 		applyStabilType(el, velocity, options)
-	})
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [vx, vy])
+
 	useEffect(() => {
 		return () => {
 			const el = ref.current

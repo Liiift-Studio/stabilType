@@ -1,7 +1,7 @@
 // stabilType/src/__tests__/adjust.test.ts — unit tests for the stabilType core algorithm
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { applyStabilType, removeStabilType, lerp, overrideAxis } from '../core/adjust'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { applyStabilType, removeStabilType, startStabilType, lerp, overrideAxis } from '../core/adjust'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -111,6 +111,103 @@ describe('applyStabilType', () => {
 		})
 		expect(el.style.fontVariationSettings).toContain('"WGHT"')
 		expect(el.style.fontVariationSettings).toContain('"OPSZ"')
+	})
+})
+
+// ─── startStabilType ─────────────────────────────────────────────────────────
+
+describe('startStabilType — getVelocity callback form', () => {
+	beforeEach(() => {
+		vi.stubGlobal('getComputedStyle', () => ({ fontVariationSettings: 'normal', fontSize: '16px' }))
+		// happy-dom doesn't implement matchMedia — stub it on window directly
+		Object.defineProperty(window, 'matchMedia', {
+			writable: true,
+			configurable: true,
+			value: (_query: string) => ({ matches: false }),
+		})
+		// Fire the first rAF callback once synchronously, then return an ID for all
+		// subsequent calls without invoking them (prevents infinite recursion).
+		let firstCall = true
+		vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+			if (firstCall) { firstCall = false; cb(0) }
+			return 1
+		})
+		vi.stubGlobal('cancelAnimationFrame', vi.fn())
+	})
+
+	afterEach(() => { vi.unstubAllGlobals() })
+
+	it('calls getVelocity on each frame and applies styles', () => {
+		const el = makeEl()
+		const getVelocity = vi.fn(() => 0.5)
+		startStabilType(el, getVelocity)
+		expect(getVelocity).toHaveBeenCalled()
+		// After applying velocity=0.5, FVS should have been written
+		expect(el.style.fontVariationSettings).toContain('"wght"')
+	})
+
+	it('cleanup calls cancelAnimationFrame and removeStabilType', () => {
+		const el = makeEl()
+		// Use a rAF that only returns an ID without firing the callback
+		vi.stubGlobal('requestAnimationFrame', (_cb: FrameRequestCallback) => 42)
+		const stop = startStabilType(el, () => 0)
+		stop()
+		expect(cancelAnimationFrame).toHaveBeenCalledWith(42)
+	})
+
+	it('is a no-op when prefers-reduced-motion is set', () => {
+		Object.defineProperty(window, 'matchMedia', {
+			writable: true,
+			configurable: true,
+			value: (_query: string) => ({ matches: true }),
+		})
+		const el = makeEl()
+		const getVelocity = vi.fn(() => 1)
+		const stop = startStabilType(el, getVelocity)
+		// Loop should not have started — getVelocity never called
+		expect(getVelocity).not.toHaveBeenCalled()
+		// stop should be a no-op function
+		expect(() => stop()).not.toThrow()
+	})
+})
+
+describe('startStabilType — built-in scroll form', () => {
+	let origAddEventListener: typeof window.addEventListener
+	let origRemoveEventListener: typeof window.removeEventListener
+
+	beforeEach(() => {
+		vi.stubGlobal('getComputedStyle', () => ({ fontVariationSettings: 'normal', fontSize: '16px' }))
+		Object.defineProperty(window, 'matchMedia', {
+			writable: true,
+			configurable: true,
+			value: (_query: string) => ({ matches: false }),
+		})
+		vi.stubGlobal('requestAnimationFrame', (_cb: FrameRequestCallback) => 1)
+		vi.stubGlobal('cancelAnimationFrame', vi.fn())
+		// Spy on window event listener methods
+		origAddEventListener    = window.addEventListener
+		origRemoveEventListener = window.removeEventListener
+		window.addEventListener    = vi.fn()
+		window.removeEventListener = vi.fn()
+	})
+
+	afterEach(() => {
+		window.addEventListener    = origAddEventListener
+		window.removeEventListener = origRemoveEventListener
+		vi.unstubAllGlobals()
+	})
+
+	it('adds a scroll listener on start', () => {
+		const el = makeEl()
+		startStabilType(el)
+		expect(window.addEventListener).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true })
+	})
+
+	it('cleanup removes the scroll listener', () => {
+		const el = makeEl()
+		const stop = startStabilType(el)
+		stop()
+		expect(window.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
 	})
 })
 

@@ -225,6 +225,8 @@ export function startStabilType(
 	options?: StabilTypeOptions,
 ): () => void {
 	if (typeof window === 'undefined') return () => undefined
+	// Respect the user's OS-level motion preference — skip the animation loop entirely
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return () => undefined
 
 	let rafId: number
 
