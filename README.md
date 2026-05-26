@@ -59,6 +59,7 @@ export default function Demo() {
 
   return <p ref={ref}>Typography in motion</p>
 }
+```
 
 ### Vanilla JS
 

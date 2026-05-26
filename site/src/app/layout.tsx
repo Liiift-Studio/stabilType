@@ -5,21 +5,21 @@ import { Inter } from "next/font/google"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-	title: "stabilType — Motion-adaptive typography for smart glasses",
+	title: "stabilType — Motion-adaptive variable font typography | Type Tools",
 	icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
-	description: "stabilType adapts letter-spacing, weight, and optical size in real time based on motion velocity. Higher velocity — wider tracking, heavier weight, larger optical size.",
-	keywords: ["typography", "variable font", "motion", "velocity", "smart glasses", "AR", "XR", "wght", "opsz", "letter-spacing", "TypeScript", "npm", "react"],
+	description: "stabilType adapts letter-spacing, weight, optical size, slant, and perspective tilt in real time based on scroll velocity and device motion. Zero dependencies.",
+	keywords: ["typography", "variable font", "motion", "scroll velocity", "device motion", "gyroscope", "smart glasses", "AR", "XR", "wght", "opsz", "slnt", "letter-spacing", "TypeScript", "npm", "react"],
 	openGraph: {
-		title: "stabilType — Motion-adaptive typography for smart glasses",
-		description: "Adapts letter-spacing, weight, and optical size in real time based on motion velocity. A precision typesetting tool for smart glasses and AR displays.",
+		title: "stabilType — Motion-adaptive variable font typography",
+		description: "Adapts letter-spacing, weight, optical size, slant, and perspective tilt in real time based on scroll velocity and device motion. For web, smart glasses, and AR.",
 		url: "https://stabiltype.com",
 		siteName: "stabilType",
 		type: "website",
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "stabilType — Motion-adaptive typography for smart glasses",
-		description: "Adapts letter-spacing, weight, and optical size in real time based on motion velocity.",
+		title: "stabilType — Motion-adaptive variable font typography",
+		description: "Adapts letter-spacing, weight, optical size, slant, and perspective tilt in real time based on scroll velocity and device motion.",
 	},
 	metadataBase: new URL("https://stabiltype.com"),
 }
