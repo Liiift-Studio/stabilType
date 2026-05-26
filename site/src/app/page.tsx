@@ -15,8 +15,8 @@ export default function Home() {
 				<div className="flex flex-col gap-2">
 					<p className="text-xs uppercase tracking-widest opacity-50">stabiltype</p>
 					<h1 className="text-4xl lg:text-8xl xl:text-9xl" style={{ fontFamily: "var(--font-merriweather), serif", fontVariationSettings: '"wght" 300, "opsz" 144', lineHeight: "1.05em" }}>
-						Motion adapts<br />
-						<span style={{ opacity: 0.5, fontStyle: "italic" }}>your type.</span>
+						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }}>Motion adapts</MagnetChar><br />
+						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }} style={{ opacity: 0.5, fontStyle: "italic" }}>your type.</MagnetChar>
 					</h1>
 				</div>
 				<div className="flex items-center gap-4">
@@ -81,6 +81,7 @@ export default function Home() {
 						<p className="opacity-50">Hook — attach to any element</p>
 						<CodeBlock code={`import { useStabilType } from '@liiift-studio/stabiltype'
 import { useRef } from 'react'
+import { MagnetChar } from "@liiift-studio/magnettype"
 
 const ref = useRef(null)
 useStabilType(ref, velocity, { weightRange: [300, 700] })
