@@ -148,7 +148,7 @@ export default function Demo() {
 					{showCursor && (
 						<button
 							onClick={toggleCursor}
-							title="Cursor position drives velocity in 2D"
+							title="Switch to cursor mode: move your cursor across the screen to tilt the text plane and shift font weight — center is neutral, corners are maximum effect. Press Esc to exit."
 							className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
 							style={{
 								borderColor: 'currentColor',
@@ -163,7 +163,7 @@ export default function Demo() {
 					{showGyro && (
 						<button
 							onClick={toggleGyro}
-							title="Device motion drives velocity"
+							title="Switch to gyro mode: tilt your device to drive the effect — the accelerometer feeds live motion into stabilType, adjusting font weight and perspective to counteract perceived tilt."
 							className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
 							style={{
 								borderColor: 'currentColor',
@@ -260,7 +260,7 @@ function LiveReadout({
 		<div className="flex items-center gap-6">
 			{/* Direction indicator */}
 			<div
-				title="Current tilt direction"
+				title="Live tilt direction: the dot shows which way the text plane is currently tilting — driven by scroll velocity, cursor position, or device motion depending on active mode"
 				style={{
 					width: 40,
 					height: 40,
