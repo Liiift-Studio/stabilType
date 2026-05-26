@@ -130,6 +130,15 @@ stop() // cancel loop and restore styles`} />
 				</div>
 			</section>
 
+			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6">
+				<div className="prose-grid flex flex-col gap-4">
+					<p className="opacity-50">Accessibility</p>
+					<p className="text-sm opacity-70 leading-relaxed">
+						stabilType respects <code className="font-mono text-xs opacity-90">prefers-reduced-motion</code> — when the user has requested reduced motion, <code className="font-mono text-xs opacity-90">startStabilType</code> returns without installing the scroll listener or rAF loop, leaving the element unmodified.
+					</p>
+				</div>
+			</section>
+
 			<SiteFooter current="stabilType" npmVersion={version} siteVersion={siteVersion} />
 
 		</main>
