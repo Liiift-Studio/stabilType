@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 		description: "Adapts letter-spacing, weight, optical size, slant, and perspective tilt in real time based on scroll velocity and device motion.",
 	},
 	metadataBase: new URL("https://stabiltype.com"),
+	alternates: { canonical: "https://stabiltype.com" },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
