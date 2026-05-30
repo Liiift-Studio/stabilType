@@ -147,10 +147,12 @@ export function applyStabilType(
 	const clampedVY = Math.min(1, Math.max(-1, vy))
 	const clampedVX = Math.min(1, Math.max(-1, vx))
 
-	// EMA smoothing per axis: new = prev * (1 – α) + input * α
-	const alpha = Math.min(1, Math.max(0, 1 - smoothing))
-	state.smoothedVY = state.smoothedVY * alpha + clampedVY * (1 - alpha)
-	state.smoothedVX = state.smoothedVX * alpha + clampedVX * (1 - alpha)
+	// EMA: new = prev * (1 – smoothing) + input * smoothing
+	// smoothing=0: velocity frozen (no response); smoothing=1: snaps instantly (no lag)
+	// Default 0.15 → 15% new input per frame, giving a gentle follow-through feel
+	const s = Math.min(1, Math.max(0, smoothing))
+	state.smoothedVY = state.smoothedVY * (1 - s) + clampedVY * s
+	state.smoothedVX = state.smoothedVX * (1 - s) + clampedVX * s
 
 	const ty = state.smoothedVY  // signed –1…+1, vertical
 	const tx = state.smoothedVX  // signed –1…+1, horizontal
@@ -309,7 +311,9 @@ export function startStabilType(
 	if (savedState.has(el)) savedState.get(el)!.rafId = rafId
 
 	return () => {
-		cancelAnimationFrame(rafId)
+		// rafId is 0 when the loop is sleeping (SLEEP_THRESHOLD met); guard to avoid
+		// passing 0 to cancelAnimationFrame, which would cancel an unrelated frame.
+		if (rafId) cancelAnimationFrame(rafId)
 		window.removeEventListener('scroll', onScroll)
 		removeStabilType(el)
 	}

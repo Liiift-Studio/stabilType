@@ -10,7 +10,11 @@ export interface StabilTypeOptions {
 	opszRange?: [number, number]
 	/** Opacity range: [at rest, at max velocity]. Default: [1, 0.7] */
 	opacityRange?: [number, number]
-	/** Exponential moving average smoothing factor 0–1. Higher = more smoothing. Default: 0.15 */
+	/**
+	 * EMA weight for the new velocity sample each frame, 0–1.
+	 * 0 = velocity frozen (no response); 1 = snaps instantly (no lag).
+	 * Higher = faster response / less lag. Default: 0.15
+	 */
 	smoothing?: number
 	/** Variable font weight axis tag. Default: 'wght' */
 	weightAxis?: string
