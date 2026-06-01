@@ -1,9 +1,16 @@
 "use client"
 
 // Demo: scroll velocity (both axes) drives perspective compression, directional tilt, and font adaptation
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { startStabilType } from "@liiift-studio/stabiltype"
 import type { StabilTypeOptions, Velocity2D } from "@liiift-studio/stabiltype"
+
+// Hoisted regex constants — reused each rAF tick rather than re-created
+const RE_PERSPECTIVE = /perspective\((\d+)px\)/
+const RE_ROTATE_X    = /rotateX\(([-.0-9]+)deg\)/
+const RE_ROTATE_Y    = /rotateY\(([-.0-9]+)deg\)/
+const RE_WGHT        = /"wght"\s+([\d.]+)/
+const RE_TRACKING    = /([-.0-9]+)em/
 
 const PARA_1 = "Typography has always assumed a fixed observer. The reader is still, the page is still, and every spacing decision optimises for that arrangement. But text increasingly appears in motion — on phones jostled by footsteps, on smart glasses updating while the wearer turns, on dashboards alive with road vibration."
 
@@ -110,24 +117,35 @@ export default function Demo() {
 		}
 	}, [gyroMode])
 
-	const toggleCursor = () => {
+	const [gyroDenied, setGyroDenied] = useState(false)
+
+	const toggleCursor = useCallback(() => {
 		setGyroMode(false)
 		setCursorMode(v => !v)
-	}
+	}, [])
 
-	const toggleGyro = async () => {
+	const toggleGyro = useCallback(async () => {
 		if (gyroMode) { setGyroMode(false); return }
 		setCursorMode(false)
+		setGyroDenied(false)
 		const DME = DeviceMotionEvent as typeof DeviceMotionEvent & {
 			requestPermission?: () => Promise<PermissionState>
 		}
-		if (typeof DME.requestPermission === 'function') {
-			const perm = await DME.requestPermission()
-			if (perm === 'granted') setGyroMode(true)
-		} else {
-			setGyroMode(true)
+		try {
+			if (typeof DME.requestPermission === 'function') {
+				const perm = await DME.requestPermission()
+				if (perm === 'granted') {
+					setGyroMode(true)
+				} else {
+					setGyroDenied(true)
+				}
+			} else {
+				setGyroMode(true)
+			}
+		} catch {
+			setGyroDenied(true)
 		}
-	}
+	}, [gyroMode])
 
 	const activeMode = cursorMode || gyroMode
 
@@ -136,18 +154,21 @@ export default function Demo() {
 
 			{/* Controls */}
 			<div className="flex flex-wrap items-center justify-between gap-4">
-				<p className="text-xs opacity-40 italic flex-1">
+				<p className="text-xs opacity-40 italic flex-1" aria-live="polite" aria-atomic="true">
 					{cursorMode
 						? 'Move cursor across the screen — center is neutral, corners are max. Press Esc to exit.'
 						: gyroMode
 							? 'Move your device to drive the effect.'
-							: '↕↔ Scroll this page to feel the effect'}
+							: gyroDenied
+								? 'Motion access was denied. Re-enable it in your browser settings and try again.'
+								: '↕↔ Scroll this page to feel the effect'}
 				</p>
 
 				<div className="flex items-center gap-3">
 					{showCursor && (
 						<button
 							onClick={toggleCursor}
+							aria-pressed={cursorMode}
 							title="Switch to cursor mode: move your cursor across the screen to tilt the text plane and shift font weight — center is neutral, corners are maximum effect. Press Esc to exit."
 							className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
 							style={{
@@ -163,6 +184,7 @@ export default function Demo() {
 					{showGyro && (
 						<button
 							onClick={toggleGyro}
+							aria-pressed={gyroMode}
 							title="Switch to gyro mode: tilt your device to drive the effect — the accelerometer feeds live motion into stabilType, adjusting font weight and perspective to counteract perceived tilt."
 							className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all"
 							style={{
@@ -239,12 +261,21 @@ function LiveReadout({
 			const transform = el.style.transform ?? ''
 			const fvs = el.style.fontVariationSettings ?? ''
 			const ls = el.style.letterSpacing ?? ''
-			setVals({
-				perspective: parseInt(transform.match(/perspective\((\d+)px\)/)?.[1] ?? '5000'),
-				rotateX:     parseFloat(transform.match(/rotateX\(([-.0-9]+)deg\)/)?.[1] ?? '0'),
-				rotateY:     parseFloat(transform.match(/rotateY\(([-.0-9]+)deg\)/)?.[1] ?? '0'),
-				wght:        parseFloat(fvs.match(/"wght"\s+([\d.]+)/)?.[1] ?? '300'),
-				tracking:    parseFloat(ls.match(/([-.0-9]+)em/)?.[1] ?? '0'),
+			const nextPerspective = parseInt(transform.match(RE_PERSPECTIVE)?.[1] ?? '5000', 10)
+			const nextRotateX     = parseFloat(transform.match(RE_ROTATE_X)?.[1] ?? '0')
+			const nextRotateY     = parseFloat(transform.match(RE_ROTATE_Y)?.[1] ?? '0')
+			const nextWght        = parseFloat(fvs.match(RE_WGHT)?.[1] ?? '300')
+			const nextTracking    = parseFloat(ls.match(RE_TRACKING)?.[1] ?? '0')
+			// Skip re-render when values are unchanged
+			setVals(prev => {
+				if (
+					prev.perspective === nextPerspective &&
+					prev.rotateX === nextRotateX &&
+					prev.rotateY === nextRotateY &&
+					prev.wght === nextWght &&
+					prev.tracking === nextTracking
+				) return prev
+				return { perspective: nextPerspective, rotateX: nextRotateX, rotateY: nextRotateY, wght: nextWght, tracking: nextTracking }
 			})
 		}
 		rafId = requestAnimationFrame(tick)
@@ -257,10 +288,10 @@ function LiveReadout({
 	const dotY = Math.max(-1, Math.min(1, -vals.rotateX / TILT_MAX))
 
 	return (
-		<div className="flex items-center gap-6">
-			{/* Direction indicator */}
+		<div className="flex items-center gap-6" aria-hidden="true">
+			{/* Direction indicator — decorative; numeric values below convey the same info */}
 			<div
-				title="Live tilt direction: the dot shows which way the text plane is currently tilting — driven by scroll velocity, cursor position, or device motion depending on active mode"
+				aria-hidden="true"
 				style={{
 					width: 40,
 					height: 40,
@@ -270,7 +301,7 @@ function LiveReadout({
 					flexShrink: 0,
 				}}
 			>
-				<div style={{
+				<div aria-hidden="true" style={{
 					width: 6,
 					height: 6,
 					borderRadius: '50%',

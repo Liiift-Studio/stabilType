@@ -15,8 +15,8 @@ export default function Home() {
 				<div className="flex flex-col gap-2">
 					<p className="text-xs uppercase tracking-widest opacity-50">stabiltype</p>
 					<h1 className="text-4xl lg:text-8xl xl:text-9xl" style={{ fontFamily: "var(--font-merriweather), serif", fontVariationSettings: '"wght" 300, "opsz" 144', lineHeight: "1.05em" }}>
-						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }}>Motion adapts</MagnetChar><br />
-						<MagnetChar as="span" minWeight={300} maxWeight={800} spreadRadius={220} fixedAxes={{ opsz: 144 }} style={{ opacity: 0.5, fontStyle: "italic" }}>your type.</MagnetChar>
+						Motion adapts<br />
+						<span style={{ opacity: 0.5, fontStyle: "italic" }}>your type.</span>
 					</h1>
 				</div>
 				<div className="flex items-center gap-4">
@@ -32,7 +32,7 @@ export default function Home() {
 			</section>
 
 			{/* Demo */}
-			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-4">
+			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-4" aria-label="Live demo">
 				<p className="text-xs uppercase tracking-widest opacity-50">Live demo — scroll this page, or use cursor / gyro</p>
 				<div className="rounded-xl -mx-8 px-8 py-12" style={{ background: "rgba(0,0,0,0.25)" }}>
 					<Demo />
@@ -71,7 +71,10 @@ export default function Home() {
 				<div className="flex flex-col gap-8 text-sm">
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Drop-in component</p>
-						<CodeBlock code={`import { StabilTypeText } from '@liiift-studio/stabiltype'
+						<CodeBlock code={`import { StabilTypeText, useScrollVelocity } from '@liiift-studio/stabiltype'
+
+// useScrollVelocity returns a Velocity2D ref updated each frame
+const velocity = useScrollVelocity()
 
 <StabilTypeText velocity={velocity}>
   Heading text
@@ -79,10 +82,11 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Hook — attach to any element</p>
-						<CodeBlock code={`import { useStabilType } from '@liiift-studio/stabiltype'
+						<CodeBlock code={`import { useStabilType, useScrollVelocity } from '@liiift-studio/stabiltype'
 import { useRef } from 'react'
-import { MagnetChar } from "@liiift-studio/magnettype"
 
+// useScrollVelocity returns a Velocity2D ref ({ x, y }) updated each frame
+const velocity = useScrollVelocity()
 const ref = useRef(null)
 useStabilType(ref, velocity, { weightRange: [300, 700] })
 <h1 ref={ref}>Heading text</h1>`} />
@@ -95,10 +99,10 @@ const el = document.querySelector('h1')
 
 // Built-in scroll listener — tracks both X and Y axes automatically
 const stop = startStabilType(el, {
-  trackingRange: [0, 0.08],
+  trackingRange: [0, 0.06], // default
   weightRange: [300, 600],
   perspective: 600,
-  tilt: 4,
+  tilt: 3, // default
 })
 
 // External 2D velocity source — e.g. IMU or pointer
@@ -108,15 +112,16 @@ stop() // cancel loop and restore styles`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Options</p>
-						<table className="w-full text-xs">
+						<table className="w-full text-xs" aria-label="StabilTypeOptions reference">
+							<caption className="sr-only">StabilTypeOptions reference</caption>
 							<thead><tr className="opacity-50 text-left"><th className="pb-2 pr-6 font-normal">Option</th><th className="pb-2 pr-6 font-normal">Default</th><th className="pb-2 font-normal">Description</th></tr></thead>
 							<tbody className="opacity-70">
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">trackingRange</td><td className="py-2 pr-6">[0, 0.06]</td><td className="py-2">Letter-spacing range in em: [at rest, at max velocity].</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">weightRange</td><td className="py-2 pr-6">[300, 600]</td><td className="py-2">wght axis range: [at rest, at max velocity].</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">opszRange</td><td className="py-2 pr-6">[12, 24]</td><td className="py-2">opsz axis range: [at rest, at max velocity].</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">opacityRange</td><td className="py-2 pr-6">[1, 0.7]</td><td className="py-2">Opacity range: [at rest, at max velocity].</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">smoothing</td><td className="py-2 pr-6">0.15</td><td className="py-2">EMA smoothing factor 0–1. Higher = more smoothing (slower response).</td></tr>
-								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">velocityMax</td><td className="py-2 pr-6">15</td><td className="py-2">Scroll velocity in px/frame that maps to maximum typography adjustment. Only used in built-in scroll mode (no getVelocity callback).</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">smoothing</td><td className="py-2 pr-6">0.15</td><td className="py-2">EMA weight of the new sample per frame, 0–1. Higher = faster response (less lag); 1 snaps instantly; 0 freezes.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">velocityMax</td><td className="py-2 pr-6">15</td><td className="py-2">Scroll velocity in px/frame that maps to maximum typography adjustment. Only used by <code className="font-mono text-xs">startStabilType</code> in built-in scroll mode — <code className="font-mono text-xs">applyStabilType</code> and <code className="font-mono text-xs">useStabilType</code> expect a pre-normalised –1…+1 velocity and ignore this option.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">weightAxis</td><td className="py-2 pr-6">&apos;wght&apos;</td><td className="py-2">Variable font weight axis tag.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">opszAxis</td><td className="py-2 pr-6">&apos;opsz&apos;</td><td className="py-2">Variable font optical size axis tag.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">perspective</td><td className="py-2 pr-6">600</td><td className="py-2">CSS perspective depth in px at peak velocity. Tighter = more dramatic compression. 0 to disable.</td></tr>
